@@ -20,7 +20,7 @@ This repository contains a modular simulation of a **cortical column** using the
   - `layer.py`  
     Code for an individual cortical layer, including neuron populations and local connectivity.
   - `neuron_models.py`  
-    Contains the neuron model definitions using APEX equations.
+    Contains the neuron model definitions using ADEX equations.
   - `parameters.py`  
     Electrophysiological parameters for neuron dynamics and synaptic interactions (e.g., conductances, delays, time constants).
 
