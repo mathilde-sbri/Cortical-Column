@@ -5,18 +5,23 @@ This repository contains a modular simulation of a **cortical column** using the
 
 ---
 
-## 📁 Project Structure
+## Structure
 
-.
-├── configs/
-│ └── layer_configs.py # Layer-specific configurations: neuron counts, types, structure
-├── src/
-│ ├── column.py # Cortical column class: integrates multiple layers
-│ ├── layer.py # Defines a single layer: neuron populations and local connectivity
-│ ├── neuron_models.py # Neuron model definitions (APEX equations)
-│ ├── parameters.py # Electrophysiological parameters: conductances, delays, etc.
-├── main.py # Main script to run the simulation
+- `main.py`  
+  Main script to launch the simulation.
 
+- `configs/`
+  - `layer_configs.py`  
+    Configuration for each cortical layer: number of neurons, layer definitions, and population types.
 
----
+- `src/`
+  - `column.py`  
+    Defines the full cortical column structure, assembling multiple layers and managing inter-layer connectivity.
+  - `layer.py`  
+    Code for an individual cortical layer, including neuron populations and local connectivity.
+  - `neuron_models.py`  
+    Contains the neuron model definitions using APEX equations.
+  - `parameters.py`  
+    Electrophysiological parameters for neuron dynamics and synaptic interactions (e.g., conductances, delays, time constants).
+
 
