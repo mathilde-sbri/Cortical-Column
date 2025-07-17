@@ -9,7 +9,7 @@ from .neuron_models import NeuronModels, NeuronParameters
 
 class CorticalLayer:
     """
-     a single cortical layer with E, PV, and SST populations
+     a single cortical layer with E, PV, VIP and SOM populations
     """
     
     def __init__(self, name, config):
@@ -32,6 +32,7 @@ class CorticalLayer:
             'tau_i': TAU_I, 
             'tau_e_pv': TAU_E_PV,
             'tau_e_som': TAU_E_SOM,
+            'tau_e_vip': TAU_E_VIP,
             'tauw': TAU_W,
             'VT': VT, 
             'V_reset': V_RESET, 
@@ -60,6 +61,15 @@ class CorticalLayer:
         self.neuron_groups['SOM'] = NeuronGroup(
             self.config['neuron_counts']['SOM'],
             NeuronModels.get_sst_equations(),
+            threshold='v>Vcut',
+            reset="v=V_reset; w+=b",
+            refractory=T_REF,
+            namespace=common_namespace
+        )
+
+        self.neuron_groups['VIP'] = NeuronGroup(
+            self.config['neuron_counts']['VIP'],
+            NeuronModels.get_vip_equations(),
             threshold='v>Vcut',
             reset="v=V_reset; w+=b",
             refractory=T_REF,
@@ -99,6 +109,17 @@ class CorticalLayer:
         self.neuron_groups['SOM'].gi = 0*nS
         self.neuron_groups['SOM'].w = 0*pA
         self.neuron_groups['SOM'].I = 0*pA
+
+        params = NeuronParameters.get_vip_params()
+        for param, value in params.items():
+            setattr(self.neuron_groups['VIP'], param, value)
+        self.neuron_groups['VIP'].Vcut = VT + 5*params['DeltaT']
+        self.neuron_groups['VIP'].v = INITIAL_VOLTAGE
+        self.neuron_groups['VIP'].ge = 0*nS
+        self.neuron_groups['VIP'].gi = 0*nS
+        self.neuron_groups['VIP'].w = 0*pA
+        self.neuron_groups['VIP'].I = 0*pA
+
     
     def _create_monitors(self):
         for pop_name, group in self.neuron_groups.items():
@@ -142,12 +163,19 @@ class CorticalLayer:
         )
         self.synapses['E_PV'].connect(p=2*p)
         
-        # E to SST 
+        # E to SOM
         self.synapses['E_SOM'] = Synapses(
             self.neuron_groups['E'], self.neuron_groups['SOM'],
             on_pre=f'ge_post += {Q_E_TO_SOM/nS}*nS'
         )
         self.synapses['E_SOM'].connect(p=p)
+
+        # E to VIP 
+        self.synapses['E_VIP'] = Synapses(
+            self.neuron_groups['E'], self.neuron_groups['VIP'],
+            on_pre=f'ge_post += {Q_E_TO_VIP/nS}*nS'
+        )
+        self.synapses['E_VIP'].connect(p=p)
         
         # PV to E 
         self.synapses['PV_E'] = Synapses(
@@ -163,19 +191,33 @@ class CorticalLayer:
         )
         self.synapses['PV_PV'].connect(p=p)
         
-        # SST to E 
+        # SOM to E 
         self.synapses['SOM_E'] = Synapses(
             self.neuron_groups['SOM'], self.neuron_groups['E'],
             on_pre=f'gi_post += {Q_SOM_TO_EPV/nS}*nS'
         )
         self.synapses['SOM_E'].connect(p=p)
         
-        # SST to PV 
+        # SOM to PV 
         self.synapses['SOM_PV'] = Synapses(
             self.neuron_groups['SOM'], self.neuron_groups['PV'],
             on_pre=f'gi_post += {Q_SOM_TO_EPV/nS}*nS'
         )
         self.synapses['SOM_PV'].connect(p=p)
+
+        # VIP to PV 
+        self.synapses['VIP_PV'] = Synapses(
+            self.neuron_groups['VIP'], self.neuron_groups['PV'],
+            on_pre=f'ge_post += {Q_VIP_TO_PV/nS}*nS'
+        )
+        self.synapses['VIP_PV'].connect(p=2*p)
+        
+        # VIP to SOM
+        self.synapses['VIP_SOM'] = Synapses(
+            self.neuron_groups['VIP'], self.neuron_groups['SOM'],
+            on_pre=f'ge_post += {Q_VIP_TO_SOM/nS}*nS'
+        )
+        self.synapses['VIP_SOM'].connect(p=p)
     
     def get_monitor(self, monitor_type, population='E'):
         return self.monitors.get(f'{population}_{monitor_type}')

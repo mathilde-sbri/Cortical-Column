@@ -66,6 +66,26 @@ class NeuronModels:
         C : farad
         gL : siemens
         """
+    
+    @staticmethod
+    def get_vip_equations():
+        return """
+        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + I)/C : volt (unless refractory)
+        IsynE=ge*(Ee-v) : amp
+        IsynI=gi*(Ei-v) : amp
+        dge/dt = -ge/tau_e_vip : siemens
+        dgi/dt = -gi/tau_i : siemens
+        dw/dt = (a*(v - EL) - w)/tauw : amp
+        taum= C/gL : second
+        I : amp
+        a : siemens
+        b : amp
+        DeltaT: volt
+        Vcut: volt
+        EL : volt
+        C : farad
+        gL : siemens
+        """
 
 class NeuronParameters:
     
@@ -98,6 +118,18 @@ class NeuronParameters:
             'b': 25*pA,
             'DeltaT': 1.5*mV,
             'EL': E_LEAK_SST,
+            'C': NEURON_CAPACITANCE,
+            'gL': NEURON_LEAK_CONDUCTANCE
+        }
+    
+    @staticmethod
+    # TO CHECK !!!
+    def get_vip_params():
+        return {
+            'a': 2*nS, # or 4 ?
+            'b': 50*pA,
+            'DeltaT': 2*mV,
+            'EL': E_LEAK_VIP,
             'C': NEURON_CAPACITANCE,
             'gL': NEURON_LEAK_CONDUCTANCE
         }

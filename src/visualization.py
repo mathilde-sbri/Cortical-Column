@@ -34,6 +34,11 @@ class NetworkVisualizer:
                 ax.scatter(monitors['PV_spikes'].t/second,
                           monitors['PV_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'],
                           color='red', s=0.5, alpha=0.8, label="PV")
+                
+            if 'VIP_spikes' in monitors:
+                ax.scatter(monitors['VIP_spikes'].t/second,
+                          monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
+                          color='gold', s=0.5, alpha=0.8, label="VIP")
             
             ax.set_xlim(0, 4)
             ax.set_ylabel('Neuron index')
