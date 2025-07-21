@@ -14,7 +14,7 @@ class CorticalColumn:
     
     def __init__(self, column_id=0, layer_names=None):
         self.column_id = column_id
-        self.layer_names = layer_names or ['L23', 'L4', 'L56']
+        self.layer_names = layer_names or ['L1', 'L23', 'L4', 'L5', 'L6']
         self.layers = {}
         self.inter_layer_synapses = {}
         

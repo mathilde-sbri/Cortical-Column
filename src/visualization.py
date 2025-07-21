@@ -27,7 +27,7 @@ class NetworkVisualizer:
             if 'SOM_spikes' in monitors:
                 ax.scatter(monitors['SOM_spikes'].t/second, 
                           monitors['SOM_spikes'].i + config['neuron_counts']['E'],
-                          color='blue', s=0.5, alpha=0.8, label="SST")
+                          color='blue', s=0.5, alpha=0.8, label="SOM")
             
             # PV spikes
             if 'PV_spikes' in monitors:
