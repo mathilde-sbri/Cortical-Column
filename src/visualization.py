@@ -18,18 +18,15 @@ class NetworkVisualizer:
             ax = axes[i]
             config = layer_configs[layer_name]
             
-            # E spikes
             if 'E_spikes' in monitors:
                 ax.scatter(monitors['E_spikes'].t/second, monitors['E_spikes'].i,
                           color='green', s=0.5, alpha=0.6, label="E")
             
-            # SOM spikes
             if 'SOM_spikes' in monitors:
                 ax.scatter(monitors['SOM_spikes'].t/second, 
                           monitors['SOM_spikes'].i + config['neuron_counts']['E'],
                           color='blue', s=0.5, alpha=0.8, label="SOM")
             
-            # PV spikes
             if 'PV_spikes' in monitors:
                 ax.scatter(monitors['PV_spikes'].t/second,
                           monitors['PV_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'],
