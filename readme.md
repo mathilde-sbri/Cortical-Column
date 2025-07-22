@@ -26,3 +26,34 @@ This repository contains a modular simulation of a **cortical column** using the
     Electrophysiological parameters for neuron dynamics and synaptic interactions (conductances, delays, time constants).
 
 
+## Getting Started
+
+To run the simulation locally:
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/mathilde-sbri/Cortical-Column.git
+cd Cortical-Column
+```
+
+### 2. Set up a virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate        # On Windows: venv\Scripts\activate
+```
+
+### 3. Install dependencies
+
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the simulation
+
+
+```bash
+python main.py
+```
