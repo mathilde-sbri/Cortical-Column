@@ -1,5 +1,4 @@
 .vscode/
 */__pycache__
-experiments/
 *.pyc
-preliminary_results.py
+first_sim.py

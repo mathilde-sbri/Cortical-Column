@@ -13,6 +13,8 @@ This repository contains a modular simulation of a **cortical column** using the
 - `config/`
   - `config.py`  
     Configuration file with simulation params, neuron/synapse constants, per-layer settings, inter-layer connectivity, initial conditions, and inputs.
+    - `config_veit.py`  
+    Configuration file reproducing Veit et al 2022
 
 
 
