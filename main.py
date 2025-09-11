@@ -5,26 +5,25 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 
-from src.parameters import *
+from config.config_veit import CONFIG
 from src.column import CorticalColumn
 from src.visualization import NetworkVisualizer
 from src.analysis import LFPAnalysis
-from config.layer_configs import LAYER_CONFIGS
 
 def main():
   
-    np.random.seed(RANDOM_SEED)
+    np.random.seed(CONFIG['simulation']['RANDOM_SEED'])
     b2.start_scope()
-    b2.defaultclock.dt = DT
+    b2.defaultclock.dt = CONFIG['simulation']['DT']
     
     print("Creating cortical column...")
-    column = CorticalColumn(column_id=0)
+    column = CorticalColumn(column_id=0, config=CONFIG)
     
     # Not sure this is actually useful, to check
     all_monitors = column.get_all_monitors()
     
     print("Running simulation...")
-    column.network.run(SIMULATION_TIME)
+    column.network.run(CONFIG['simulation']['SIMULATION_TIME'])
     print("Simulation complete")
     
     spike_monitors = {}
@@ -40,11 +39,11 @@ def main():
     
 
     
-    fig1 = NetworkVisualizer.plot_raster(spike_monitors, LAYER_CONFIGS)
+    fig1 = NetworkVisualizer.plot_raster(spike_monitors, CONFIG['layers'])
     
-    fig2 = NetworkVisualizer.plot_lfp(state_monitors, LAYER_CONFIGS)
+    # fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
     
-    fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, LAYER_CONFIGS)
+    # fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
     
     plt.show()
 
