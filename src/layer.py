@@ -29,20 +29,9 @@ class CorticalLayer:
     
     def _create_neuron_groups(self):
 
-        common_namespace = {
-            'tau_e': self.config['time_constants']['E'],
-            'tau_i': self.config['time_constants']['I'],
-            'tau_e_pv': self.config['time_constants']['E_PV'],
-            'tau_e_som': self.config['time_constants']['E_SOM'],
-            'tau_e_vip': self.config['time_constants']['E_VIP'],
-            'tauw': self.config['neurons']['TAU_W'],
-            'VT': self.config['neurons']['VT'],
-            'V_reset': self.config['neurons']['V_RESET'],
-            'Ee': self.config['neurons']['EE'],
-            'Ei': self.config['neurons']['EI'],
-        }
-        
-        extra_ns = self.config['models'].get('namespace', {})
+        models_cfg = self.config.get('models', {})
+        common_namespace = dict(models_cfg.get('common_namespace', {}))
+        extra_ns = models_cfg.get('namespace', {})
         common_namespace.update(extra_ns)
 
 
@@ -89,55 +78,79 @@ class CorticalLayer:
         self._set_neuron_parameters()
     
     def _set_neuron_parameters(self):
+
+        import brian2 as b2
+
         def set_if_exists(group, attr, value):
-            if hasattr(group, attr):
-                setattr(group, attr, value)
+            try:
+                getattr(group, attr)
+            except AttributeError:
+                return
+            setattr(group, attr, value)
+
+        cfg = self.config
+        neurons_cfg = cfg.get('neurons', {})
+        intrinsic = cfg.get('intrinsic_params', {})
+        ic_all = cfg.get('initial_conditions', {})
+        vt = neurons_cfg.get('VT', -50.0*b2.mV)
 
         def apply_params_and_ic(pop_key):
-            group = self.neuron_groups[pop_key]
-            ip = self.config['intrinsic_params'][pop_key]
-            # keep your existing parameters (safe no-ops if eqs ignore them)
-            set_if_exists(group, 'a', ip.get('a', 0*nS))
-            set_if_exists(group, 'b', ip.get('b', 0*pA))
-            set_if_exists(group, 'DeltaT', ip.get('DeltaT', self.config['neurons']['VT']-self.config['neurons']['V_RESET']))
-            set_if_exists(group, 'EL', self.config['neurons']['E_LEAK'][pop_key])
-            set_if_exists(group, 'C', self.config['neurons']['CAPACITANCE'])
-            set_if_exists(group, 'gL', self.config['neurons']['LEAK_CONDUCTANCE'])
+            if pop_key not in self.neuron_groups:
+                return
+            g = self.neuron_groups[pop_key]
 
-            # initial conditions are per-pop, fallback to DEFAULT
-            ic_all = self.config.get('initial_conditions', {})
-            ic_pop = ic_all.get(pop_key, {})
+            ip = intrinsic.get(pop_key, {})
+            set_if_exists(g, 'a',       ip.get('a', 0*b2.nS))
+            set_if_exists(g, 'b',       ip.get('b', 0*b2.pA))
+            set_if_exists(g, 'DeltaT',  ip.get('DeltaT', 2*b2.mV))  # safe default
+            eleak_map = neurons_cfg.get('E_LEAK', {})
+            set_if_exists(g, 'EL',      eleak_map.get(pop_key, neurons_cfg.get('INITIAL_VOLTAGE', -60*b2.mV)))
+            set_if_exists(g, 'C',       neurons_cfg.get('CAPACITANCE', 200*b2.pF))
+            set_if_exists(g, 'gL',      neurons_cfg.get('LEAK_CONDUCTANCE', 10*b2.nS))
+
             ic_default = ic_all.get('DEFAULT', {})
+            ic_pop     = ic_all.get(pop_key, {})
+            merged_ic  = dict(ic_default, **ic_pop)
 
-            # option to compute Vcut for your original model; harmless if unused
-            vcut_factor = ic_pop.get('Vcut_offset_factor', ic_default.get('Vcut_offset_factor'))
-            if vcut_factor is not None and hasattr(group, 'Vcut'):
-                group.Vcut = self.config['neurons']['VT'] + vcut_factor*ip.get('DeltaT', 0*mV)
+            vcut_factor = merged_ic.pop('Vcut_offset_factor', None)
+            if vcut_factor is not None and hasattr(g, 'Vcut'):
+                dT = ip.get('DeltaT', getattr(g, 'DeltaT', 2*b2.mV))
+                set_if_exists(g, 'Vcut', vt + vcut_factor * dT)
 
-            # set whichever state variables exist
-            for k, v in dict(ic_default, **ic_pop).items():
-                set_if_exists(group, k, v)
+            for k, v in merged_ic.items():
+                set_if_exists(g, k, v)
 
-            # optional per-pop drive (e.g., Veit: I0 & sigma_tot)
-            drive = self.config.get('per_pop_drive', {}).get(pop_key)
+
+            drive = cfg.get('drive', None)
             if drive is not None:
-                mu, sig = drive
-                set_if_exists(group, 'I0', mu)
-                set_if_exists(group, 'sigma_tot', sig)
+                c = float(drive.get('contrast', 1.0))
+                mu_bg = drive.get('mu_bg', {})
+                sd_bg = drive.get('sd_bg', {})
+                mu_st = drive.get('mu_stim', {})
+                sd_st = drive.get('sd_stim', {})
+                sg    = drive.get('sigma_global', 0*b2.mV)
+
+                mu = mu_bg.get(pop_key, 0*b2.mV) + c * mu_st.get(pop_key, 0*b2.mV)
+                sb = sd_bg.get(pop_key, 0*b2.mV)
+                ss = sd_st.get(pop_key, 0*b2.mV)
+                sigma = b2.sqrt(sb**2 + (c*ss)**2 + sg**2)
+
+                set_if_exists(g, 'mu_drive',   mu)
+                set_if_exists(g, 'sigma_drive', sigma)
 
         for pop in ['E', 'PV', 'SOM', 'VIP']:
-            if pop in self.neuron_groups:
-                apply_params_and_ic(pop)
+            apply_params_and_ic(pop)
+
     
     def _on_pre(self, weight_key, inhibitory=False):
         W = self.config['synapses']['Q'][weight_key]
         if self.is_current:
             var = 'sI' if inhibitory else 'sE'
-            val = float(W / mV)  # dimensionless scalar
+            val = float(W / mV)  
             return f"{var}_post += {val}*mV"
         else:
             var = 'gi' if inhibitory else 'ge'
-            val = float(W / nS)  # dimensionless scalar
+            val = float(W / nS)  
             return f"{var}_post += {val}*nS"
 
         
@@ -154,95 +167,59 @@ class CorticalLayer:
     
     def _create_monitors(self):
         for pop_name, group in self.neuron_groups.items():
+            vars_to_record = ['v', 'ge', 'gi']
+            if self.is_current:           
+                vars_to_record = ['v', 'sE', 'sI']
             self.monitors[f'{pop_name}_state'] = StateMonitor(
-                group, ['v', 'ge', 'gi'], record=True
+                group, vars_to_record, record=True
             )
-            
-            self.monitors[f'{pop_name}_spikes'] = SpikeMonitor(
-                group, variables='t'
-            )
-            
+            self.monitors[f'{pop_name}_spikes'] = SpikeMonitor(group, variables='t')
             self.monitors[f'{pop_name}_rate'] = PopulationRateMonitor(group)
-    
+
     def _create_poisson_inputs(self):
         poisson_cfg = self.layer_config.get('poisson_inputs', {})
         for pop_name, pconf in poisson_cfg.items():
             if pop_name not in self.neuron_groups:
                 continue
             target_var = pconf.get('target', 'ge')
+            if self.is_current:
+                target_var = {'ge': 'sE', 'gi': 'sI'}.get(target_var, target_var)
+
             if 'N' in pconf and pconf['N'] is not None:
                 N = int(pconf['N'])
             else:
                 frac = float(pconf.get('N_fraction_of_E', 0.0))
                 N = int(frac * self.layer_config['neuron_counts']['E'])
+
             weight_cfg = pconf.get('weight', 'EXT')
-            if isinstance(weight_cfg, str):
-                weight = self.config['synapses']['Q'][weight_cfg]
-            else:
-                weight = weight_cfg
+            weight = self.config['synapses']['Q'][weight_cfg] if isinstance(weight_cfg, str) else weight_cfg
             rate = pconf.get('rate', self.layer_config.get('input_rate'))
+
             self.poisson_inputs[pop_name] = PoissonInput(
-                self.neuron_groups[pop_name], target_var,
-                N=N, rate=rate, weight=weight
+                self.neuron_groups[pop_name], target_var, N=N, rate=rate, weight=weight
             )
+
+        drive = self.config.get('drive', {})
+        vip_rate = drive.get('vip_rate', None)
+        if vip_rate:
+            Nvip = self.layer_config['neuron_counts'].get('VIP', 0)
+            if Nvip > 0:
+                w_vip = abs(self.config['synapses']['Q'].get('VIP_SOM', 0*mV))
+                target = 'sI' if self.is_current else 'gi'
+                self.poisson_inputs['VIP_to_SOM'] = PoissonInput(
+                    self.neuron_groups['SOM'], target, N=Nvip, rate=vip_rate, weight=w_vip
+                )
+
     
     def _create_internal_connections(self):
         p = self.layer_config['connection_prob']  
-        E, PV, SOM, VIP = self.neuron_groups['E'], self.neuron_groups['PV'], self.neuron_groups['SOM'], self.neuron_groups['VIP']
+        connections = list(self.layer_config['connection_prob'].keys())
+        for connection in connections :
+            group1, group2 = connection.split("_")
+            self.synapses[connection] = Synapses(self.neuron_groups[group1], self.neuron_groups[group2], on_pre=self._on_pre(connection, inhibitory= group1 != 'E'))
+            self.synapses[connection].connect(p=p[connection])
+            self._apply_delay(self.synapses[connection])
 
-        # E -> E 
-        self.synapses['E_E'] = Synapses(E, E, on_pre=self._on_pre('E_TO_E', inhibitory=False))
-        self.synapses['E_E'].connect(p=p)
-        self._apply_delay(self.synapses['E_E'])
-
-        # E -> PV
-        self.synapses['E_PV'] = Synapses(E, PV, on_pre=self._on_pre('E_TO_PV', inhibitory=False))
-        self.synapses['E_PV'].connect(p=2*p)
-        self._apply_delay(self.synapses['E_PV'])
-
-        # E -> SOM
-        self.synapses['E_SOM'] = Synapses(E, SOM, on_pre=self._on_pre('E_TO_SOM', inhibitory=False))
-        self.synapses['E_SOM'].connect(p=p)
-        self._apply_delay(self.synapses['E_SOM'])
-
-        # E -> VIP
-        if len(VIP) > 0 and 'E_TO_VIP' in self.config['synapses']['Q']:
-            self.synapses['E_VIP'] = Synapses(E, VIP, on_pre=self._on_pre('E_TO_VIP', inhibitory=False))
-            self.synapses['E_VIP'].connect(p=p)
-            self._apply_delay(self.synapses['E_VIP'])
-
-        # PV -> E  (inhibitory)
-        self.synapses['PV_E'] = Synapses(PV, E, on_pre=self._on_pre('PV_TO_EPV', inhibitory=True))
-        self.synapses['PV_E'].connect(p=p)
-        self._apply_delay(self.synapses['PV_E'])
-
-        # PV -> PV
-        self.synapses['PV_PV'] = Synapses(PV, PV, on_pre=self._on_pre('PV_TO_EPV', inhibitory=True))
-        self.synapses['PV_PV'].connect(p=p)
-        self._apply_delay(self.synapses['PV_PV'])
-
-        # SOM -> E
-        self.synapses['SOM_E'] = Synapses(SOM, E, on_pre=self._on_pre('SOM_TO_EPV', inhibitory=True))
-        self.synapses['SOM_E'].connect(p=p)
-        self._apply_delay(self.synapses['SOM_E'])
-
-        # SOM -> PV
-        self.synapses['SOM_PV'] = Synapses(SOM, PV, on_pre=self._on_pre('SOM_TO_EPV', inhibitory=True))
-        self.synapses['SOM_PV'].connect(p=p)
-        self._apply_delay(self.synapses['SOM_PV'])
-
-        # quick solution but to change and generalise later 
-        if len(VIP) > 0:
-            if 'VIP_TO_PV' in self.config['synapses']['Q']:
-                inh = (self.config['synapses']['Q']['VIP_TO_PV'] < 0*volt) if self.is_current else False
-                self.synapses['VIP_PV'] = Synapses(VIP, PV, on_pre=self._on_pre('VIP_TO_PV', inhibitory=inh))
-                self.synapses['VIP_PV'].connect(p=2*p)
-                self._apply_delay(self.synapses['VIP_PV'])
-            if 'VIP_TO_SOM' in self.config['synapses']['Q']:
-                inh = (self.config['synapses']['Q']['VIP_TO_SOM'] < 0*volt) if self.is_current else False
-                self.synapses['VIP_SOM'] = Synapses(VIP, SOM, on_pre=self._on_pre('VIP_TO_SOM', inhibitory=inh))
-                self.synapses['VIP_SOM'].connect(p=p)
-                self._apply_delay(self.synapses['VIP_SOM'])
 
     
     def get_monitor(self, monitor_type, population='E'):

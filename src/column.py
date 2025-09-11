@@ -50,7 +50,7 @@ class CorticalColumn:
             if source_layer in self.layers and target_layer in self.layers:
                 connection_name = f"{source_layer}_{target_layer}"
                 is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
-                W = self.config['synapses']['Q']['E_TO_E']
+                W = self.config['synapses']['Q']['E_E']
                 if is_current:
                     on_pre = f"sE_post += {float(W/mV)}*mV"
                 else:

@@ -5,7 +5,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 
-from config.config import CONFIG
+from config.config_veit import CONFIG
 from src.column import CorticalColumn
 from src.visualization import NetworkVisualizer
 from src.analysis import LFPAnalysis
@@ -41,9 +41,9 @@ def main():
     
     fig1 = NetworkVisualizer.plot_raster(spike_monitors, CONFIG['layers'])
     
-    fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
+    # fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
     
-    fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
+    # fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
     
     plt.show()
 

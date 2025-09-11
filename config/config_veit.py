@@ -1,99 +1,178 @@
-from brian2 import *
-from math import sqrt
+# One-layer (L23) Veit et al. 2023 configuration
 
-DOWNSCALE = 1.0
-CONTRAST = 1.0
-VIP_RATE_HZ = 8.0
+import brian2 as b2
+from brian2 import ms, mV, Hz, nS, pA
 
-Ne = int(4000*DOWNSCALE)
-Npv = int(500*DOWNSCALE)
-Nsom = int(500*DOWNSCALE)
+N_E   = 4000
+N_PV  = 500
+N_SOM = 500   
+N_VIP = 500
 
-tau_m = 5.4*ms; tau_s = 0.6*ms; t_ref = 1.2*ms; syn_delay = 1.8*ms
-EL = -60*mV; VT = -50*mV; DeltaT = 2*mV; V_reset = -75*mV; Vth = -40*mV
+TAU_M   = 5.4*ms        
+TAU_S   = 0.6*ms        
+T_REF   = 1.2*ms       
+DELAY   = 1.8*ms       
 
-wE = 0.48*mV
-wI = -1.92*mV   # g=4
-wVIP_SST = -6.4*mV
+EL   = -60.0*mV        
+VT   = -50.0*mV         
+VTH  = -20.0*mV        
+VRES = -75.0*mV         
+DELTA_T = 2.0*mV       
 
-mu_bg = {'E':3.0*mV,'PV':3.0*mV,'SOM':7.0*mV}
-sd_bg = {'E':2.1*mV,'PV':2.1*mV,'SOM':3.0*mV}
-mu_st = {'E':3.0*mV,'PV':3.0*mV,'SOM':0.0*mV}
-sd_st = {'E':2.1*mV,'PV':2.1*mV,'SOM':0.0*mV}
-sd_gl = 0.25*mV
+w_mVmsec_exc = 0.48     
+g_inh        = 4.0      
+w_exc = (w_mVmsec_exc/float(TAU_S/ms)) * mV  
+w_inh = g_inh * w_exc                        
 
-def _mu(pop): return mu_bg[pop] + CONTRAST*mu_st[pop]
-def _sd(pop): return sqrt(sd_bg[pop]**2 + (CONTRAST*sd_st[pop])**2 + sd_gl**2)
+w_vip_mVmsec = -6.4     
+w_vip_to_SST = (w_vip_mVmsec/float(TAU_S/ms)) * mV  
 
-eqs = """
-dv/dt = ( (EL - v) + DeltaT*exp((v - VT)/DeltaT) + sE + sI + I0 )/tau_m
-         + sigma_tot*xi*tau_m**-0.5 : volt (unless refractory)
-sE : volt
-sI : volt
-dsE/dt = -sE/tau_s : volt
-dsI/dt = -sI/tau_s : volt
-I0 : volt
-sigma_tot : volt
+contrast_c = 1.0
+
+mu_bg = {'E': 3.0*mV, 'PV': 3.0*mV, 'SOM': 7.0*mV}
+sd_bg = {'E': 2.1*mV, 'PV': 2.1*mV, 'SOM': 3.0*mV}
+mu_stim = {'E': 3.0*mV, 'PV': 3.0*mV, 'SOM': 0.0*mV}
+sd_stim = {'E': 2.1*mV, 'PV': 2.1*mV, 'SOM': 0.0*mV}
+
+sigma_global = 0.25*mV
+
+vip_rate = 14*Hz
+
+EIF_EQS = """
+dv/dt = (-(v - EL) + DELTA_T*exp((v - VT)/DELTA_T) + sE - sI + mu_drive)/TAU_M
+        + sigma_drive*sqrt(2/TAU_M)*xi : volt (unless refractory)
+dsE/dt = -sE/TAU_S : volt
+dsI/dt = -sI/TAU_S : volt
+mu_drive : volt
+sigma_drive : volt
 """
 
+
+P_conn_same = {
+    'E_E'   : 0.07,  
+    'PV_E'  : 0.15,   
+    'SOM_E' : 0.10,  
+    'E_PV'  : 0.05,   
+    'PV_PV' : 0.10,   
+    'SOM_PV': 0.10,   
+    'E_SOM' : 0.10,   
+    'PV_SOM': 0.00,   
+    'SOM_SOM': 0.00, 
+    'VIP_SOM': 1.0,   
+}
+
+_LAYER_CONFIGS = {
+    'L23': {
+        'connection_prob': P_conn_same,
+        'input_rate': None,   
+        'neuron_counts': {
+            'E':   N_E,
+            'PV':  N_PV,
+            'SOM': N_SOM,
+            'VIP': N_VIP,    
+        },
+   
+        'poisson_inputs': {}, 
+    }
+}
+
 CONFIG = {
-    'simulation': {'SIMULATION_TIME': 4000*ms, 'DT': 0.025*ms, 'RANDOM_SEED': 58879},
+    'simulation': {
+        'SIMULATION_TIME': 1000*ms,
+        'DT': 0.025*ms,
+        'RANDOM_SEED': 12345,
+    },
+
     'models': {
-        'synapse_model': 'current',           
-        'equations': {'E': eqs, 'PV': eqs, 'SOM': eqs, 'VIP': eqs},
-        'threshold': 'v>Vth',
-        'reset': 'v=V_RESET',
-        'namespace': {                        
-            'EL': EL, 'VT': VT, 'DeltaT': DeltaT, 'tau_m': tau_m, 'tau_s': tau_s, 'Vth': Vth
-        }
+        'synapse_model': 'current', 
+        'equations': {
+            'E':   EIF_EQS,
+            'PV':  EIF_EQS,
+            'SOM': EIF_EQS,
+            'VIP': """
+            dv/dt = 0*volt/second : volt
+            dsE/dt = -sE/TAU_S : volt
+            dsI/dt = -sI/TAU_S : volt
+            mu_drive : volt
+            sigma_drive : volt
+            """,
+        },
+        'threshold': 'v > V_th',
+        'reset':     'v = V_reset',
+        'common_namespace': {
+            'TAU_M': TAU_M,
+            'TAU_S': TAU_S,
+            'EL': EL,
+            'VT': VT,
+            'DELTA_T': DELTA_T,
+            'V_th': VTH,
+            'V_reset': VRES,
+        },
+        'namespace': {}
     },
+
     'intrinsic_params': {
-        'E': {'a':0*nS,'b':0*pA,'DeltaT':DeltaT},
-        'PV':{'a':0*nS,'b':0*pA,'DeltaT':DeltaT},
-        'SOM':{'a':0*nS,'b':0*pA,'DeltaT':DeltaT},
-        'VIP':{'a':0*nS,'b':0*pA,'DeltaT':DeltaT},
+        'E':   {},
+        'PV':  {},
+        'SOM': {},
+        'VIP': {},
     },
+
     'neurons': {
-        'V_RESET': V_reset,
-        'VT': VT, 'VTH': Vth,
-        'EE': 0.*mV, 'EI': -80.*mV,   
-        'T_REF': t_ref,
-        'TAU_W': 1*ms,
-        'CAPACITANCE': 200*pF,
-        'LEAK_CONDUCTANCE': 10*nS,
-        'E_LEAK': {'E':EL,'PV':EL,'SOM':EL,'VIP':EL},
-        'INITIAL_VOLTAGE': -60*mV,
+        'V_RESET': VRES,
+        'VT': VT,
+        'EE': 0.0*mV,   
+        'EI': -80.0*mV, 
+        'T_REF': T_REF,
+        'TAU_W': 0.0*ms,     
+        'CAPACITANCE': 200*pA*ms/mV, 
+        'LEAK_CONDUCTANCE': 10*nS,   
+        'INITIAL_VOLTAGE': EL,
+        'E_LEAK': { 'E': EL, 'PV': EL, 'SOM': EL, 'VIP': EL },
     },
+
     'initial_conditions': {
-        'DEFAULT': {'v': -60*mV, 'sE': 0*mV, 'sI': 0*mV, 'I0': 0*mV, 'sigma_tot': 0*mV, 'Vcut_offset_factor': 0},
+        'DEFAULT': {'v': EL, 'sE': 0.0*mV, 'sI': 0.0*mV, 'mu_drive': 0.0*mV, 'sigma_drive': 0.0*mV},
+        'E':   {},
+        'PV':  {},
+        'SOM': {},
+        'VIP': {'v': EL},
     },
-    'time_constants': {'TAU_M': tau_m, 'TAU_S': tau_s, 'DELAY': syn_delay},
-    'synapses': {  
+
+    'time_constants': {
+        'E': TAU_S,  
+        'I': TAU_S,
+        'DELAY': DELAY,
+    },
+
+    'synapses': {
         'Q': {
-            'E_TO_E': wE, 'E_TO_PV': wE, 'E_TO_SOM': wE,
-            'PV_TO_EPV': wI, 'SOM_TO_EPV': wI,     
-            'VIP_TO_SOM': wVIP_SST,                
-            'EXT': 0.48*mV,                       
+            'E_E'   :  w_exc,
+            'PV_E'  :  w_inh,   
+            'SOM_E' :  w_inh,
+            'E_PV'  :  w_exc,
+            'PV_PV' :  w_inh,
+            'SOM_PV':  w_inh,
+            'E_SOM' :  w_exc,
+            'PV_SOM':  0.0*mV, 
+            'SOM_SOM': 0.0*mV, 
+            'VIP_SOM': abs(w_vip_to_SST), 
+            'EXT'    :  w_exc,  
         }
     },
-    'layers': {
-        'L23': {
-            'connection_prob': 0.034,  
-            'neuron_counts': {'E': Ne, 'PV': Npv, 'SOM': Nsom, 'VIP': 0},
-            'poisson_inputs': {
-                'SOM_vip': {
-                    'target': 'sI',
-                    'rate': VIP_RATE_HZ*Hz,
-                    'weight': -6.4*mV,
-                    'N': int(500*DOWNSCALE)
-                }
-            }
-        }
-    },
-    'inter_layer_connections': {},  
-    'per_pop_drive': {
-        'E': (_mu('E'), _sd('E')),
-        'PV': (_mu('PV'), _sd('PV')),
-        'SOM': (_mu('SOM'), _sd('SOM')),
+
+    'layers': _LAYER_CONFIGS,
+
+    'inter_layer_connections': {},
+
+
+    'drive': {
+        'contrast': contrast_c,
+        'mu_bg':   mu_bg,
+        'sd_bg':   sd_bg,
+        'mu_stim': mu_stim,
+        'sd_stim': sd_stim,
+        'sigma_global': sigma_global,
+        'vip_rate': vip_rate,
     }
 }

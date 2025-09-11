@@ -4,7 +4,18 @@ from brian2 import *
 
 _LAYER_CONFIGS = {
     'L1': {
-        'connection_prob': 0.034,
+        'connection_prob': {
+            'E_E': 0.034,
+            'E_PV': 0.068,  
+            'E_SOM': 0.034,
+            'E_VIP': 0.034,
+            'PV_E': 0.034,
+            'PV_PV': 0.034,
+            'SOM_E': 0.034,
+            'SOM_PV': 0.034,
+            'VIP_PV': 0.068,  
+            'VIP_SOM': 0.034,
+        },
         'input_rate': 5*Hz,
         'neuron_counts': {
             'E': 8,
@@ -18,7 +29,18 @@ _LAYER_CONFIGS = {
         }
     },
     'L23': {
-        'connection_prob': 0.034,
+        'connection_prob': {
+            'E_E': 0.034,
+            'E_PV': 0.068,
+            'E_SOM': 0.034,
+            'E_VIP': 0.034,
+            'PV_E': 0.034,
+            'PV_PV': 0.034,
+            'SOM_E': 0.034,
+            'SOM_PV': 0.034,
+            'VIP_PV': 0.068,
+            'VIP_SOM': 0.034,
+        },
         'input_rate': 5*Hz,
         'neuron_counts': {
             'E': 3520,
@@ -32,7 +54,18 @@ _LAYER_CONFIGS = {
         }
     },
     'L4': {
-        'connection_prob': 0.034,
+        'connection_prob': {
+            'E_E': 0.034,
+            'E_PV': 0.068,
+            'E_SOM': 0.034,
+            'E_VIP': 0.034,
+            'PV_E': 0.034,
+            'PV_PV': 0.034,
+            'SOM_E': 0.034,
+            'SOM_PV': 0.034,
+            'VIP_PV': 0.068,
+            'VIP_SOM': 0.034,
+        },
         'input_rate': 5*Hz,
         'neuron_counts': {
             'E': 5760,
@@ -46,7 +79,18 @@ _LAYER_CONFIGS = {
         }
     },
     'L5': {
-        'connection_prob': 0.017,
+        'connection_prob': {
+            'E_E': 0.017,
+            'E_PV': 0.034,
+            'E_SOM': 0.017,
+            'E_VIP': 0.017,
+            'PV_E': 0.017,
+            'PV_PV': 0.017,
+            'SOM_E': 0.017,
+            'SOM_PV': 0.017,
+            'VIP_PV': 0.034,
+            'VIP_SOM': 0.017,
+        },
         'input_rate': 5*Hz,
         'neuron_counts': {
             'E': 1600,
@@ -60,7 +104,18 @@ _LAYER_CONFIGS = {
         }
     },
     'L6': {
-        'connection_prob': 0.017,
+        'connection_prob': {
+            'E_E': 0.017,
+            'E_PV': 0.034,
+            'E_SOM': 0.017,
+            'E_VIP': 0.017,
+            'PV_E': 0.017,
+            'PV_PV': 0.017,
+            'SOM_E': 0.017,
+            'SOM_PV': 0.017,
+            'VIP_PV': 0.034,
+            'VIP_SOM': 0.017,
+        },
         'input_rate': 5*Hz,
         'neuron_counts': {
             'E': 2040,
@@ -81,6 +136,18 @@ _INTER_LAYER_CONNECTIONS = {
     ('L5', 'L23'): 0.0001
 }
 
+# common_namespace variables 
+tau_e_e = 5*ms
+tau_i = 5*ms
+tau_e_pv = 1*ms
+tau_e_som = 2*ms
+tau_e_vip = 2*ms
+v_reset = -65.*mV
+vt = -50.*mV
+ee = 0.*mV
+ei = -80.*mV
+t_ref = 5*ms
+tau_w = 500*ms
 
 CONFIG = {
     'simulation': {
@@ -161,6 +228,19 @@ CONFIG = {
         },
         'threshold': 'v>Vcut',
         'reset': 'v=V_reset; w+=b',
+        'common_namespace' : {
+            'tau_e': tau_e_e,
+            'tau_i': tau_i,
+            'tau_e_pv': tau_e_pv,
+            'tau_e_som': tau_e_som,
+            'tau_e_vip': tau_e_vip,
+            'tauw': tau_w,
+            'VT': vt,
+            'V_reset': v_reset,
+            'Ee': ee,
+            'Ei': ei,
+        },
+
     },
     'intrinsic_params': {
         'E':   {'a': 4*nS, 'b': 130*pA, 'DeltaT': 2*mV},
@@ -193,25 +273,28 @@ CONFIG = {
         'VIP': {'v': -60*mV, 'ge': 0*nS, 'gi': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
     },
     'time_constants': {
-        'E': 5*ms,
-        'I': 5*ms,
-        'E_PV': 1*ms,
-        'E_SOM': 2*ms,
-        'E_VIP': 2*ms,
+        'E': tau_e_e,
+        'I': tau_i,
+        'E_PV': tau_e_pv,
+        'E_SOM': tau_e_som,
+        'E_VIP': tau_e_vip,
     },
     'synapses': {
         'Q': {
-            'PV_TO_EPV': 6*nS,
-            'SOM_TO_EPV': 5*nS,
-            'E_TO_E': 1.25*nS,
-            'E_TO_PV': 3.75*nS,
-            'E_TO_SOM': 2.5*nS,
-            'E_TO_VIP': 1.5*nS,
-            'VIP_TO_SOM': 5.0*nS,
-            'VIP_TO_PV': 2.0*nS,
+            'PV_PV': 6*nS,
+            'PV_E': 6*nS,
+            'SOM_E': 5*nS,
+            'SOM_PV': 5*nS,
+            'E_E': 1.25*nS,
+            'E_PV': 3.75*nS,
+            'E_SOM': 2.5*nS,
+            'E_VIP': 1.5*nS,
+            'VIP_SOM': 5.0*nS,
+            'VIP_PV': 2.0*nS,
             'EXT': 1.25*nS,
         }
     },
     'layers': _LAYER_CONFIGS,
     'inter_layer_connections': _INTER_LAYER_CONNECTIONS,
 }
+
