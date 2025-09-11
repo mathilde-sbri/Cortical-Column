@@ -10,20 +10,17 @@ This repository contains a modular simulation of a **cortical column** using the
 - `main.py`  
   Main script to launch the simulation.
 
-- `configs/`
-  - `layer_configs.py`  
-    Configuration for each cortical layer: number of neurons, layer definitions, and population types.
+- `config/`
+  - `config.py`  
+    Configuration file with simulation params, neuron/synapse constants, per-layer settings, inter-layer connectivity, initial conditions, and inputs.
+
 
 
 - `src/`
   - `column.py`  
     Full cortical column structure, with multiple layers.
   - `layer.py`  
-    Code for an individual cortical layer, including neuron populations and local connectivity.
-  - `neuron_models.py`  
-    Contains the neuron model definitions using ADEX equations.
-  - `parameters.py`  
-    Electrophysiological parameters for neuron dynamics and synaptic interactions (conductances, delays, time constants).
+    Code for an individual cortical layer
 
 
 ## Getting Started

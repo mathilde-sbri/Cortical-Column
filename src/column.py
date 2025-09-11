@@ -4,17 +4,18 @@ Column class implementation
 import brian2 as b2
 from brian2 import *
 from .layer import CorticalLayer
-from .parameters import *
-from config.layer_configs import LAYER_CONFIGS, INTER_LAYER_CONNECTIONS
 
 class CorticalColumn:
     """
      a cortical column with multiple layers
     """
     
-    def __init__(self, column_id=0, layer_names=None):
+    def __init__(self, column_id=0, layer_names=None, config=None):
         self.column_id = column_id
         self.layer_names = layer_names or ['L1', 'L23', 'L4', 'L5', 'L6']
+        if config is None:
+            raise ValueError("CorticalColumn requires a config dictionary. Pass CONFIG from config module.")
+        self.config = config
         self.layers = {}
         self.inter_layer_synapses = {}
         
@@ -37,21 +38,22 @@ class CorticalColumn:
     
     def _create_layers(self):
         for layer_name in self.layer_names:
-            if layer_name in LAYER_CONFIGS:
+            if layer_name in self.config['layers']:
                 self.layers[layer_name] = CorticalLayer(
                     f"{layer_name}_col{self.column_id}",
-                    LAYER_CONFIGS[layer_name]
+                    layer_name,
+                    self.config
                 )
     
     def _create_inter_layer_connections(self):
-        for (source_layer, target_layer), prob in INTER_LAYER_CONNECTIONS.items():
+        for (source_layer, target_layer), prob in self.config['inter_layer_connections'].items():
             if source_layer in self.layers and target_layer in self.layers:
                 connection_name = f"{source_layer}_{target_layer}"
                 
                 self.inter_layer_synapses[connection_name] = Synapses(
                     self.layers[source_layer].get_neuron_group('E'),
                     self.layers[target_layer].get_neuron_group('E'),
-                    on_pre=f'ge_post += {Q_E_TO_E/nS}*nS'
+                    on_pre=f"ge_post += {self.config['synapses']['Q']['E_TO_E']/nS}*nS"
                 )
                 self.inter_layer_synapses[connection_name].connect(p=prob)
     
