@@ -49,13 +49,21 @@ class CorticalColumn:
         for (source_layer, target_layer), prob in self.config['inter_layer_connections'].items():
             if source_layer in self.layers and target_layer in self.layers:
                 connection_name = f"{source_layer}_{target_layer}"
-                
-                self.inter_layer_synapses[connection_name] = Synapses(
-                    self.layers[source_layer].get_neuron_group('E'),
-                    self.layers[target_layer].get_neuron_group('E'),
-                    on_pre=f"ge_post += {self.config['synapses']['Q']['E_TO_E']/nS}*nS"
-                )
-                self.inter_layer_synapses[connection_name].connect(p=prob)
+                is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
+                W = self.config['synapses']['Q']['E_TO_E']
+                if is_current:
+                    on_pre = f"sE_post += {float(W/mV)}*mV"
+                else:
+                    on_pre = f"ge_post += {float(W/nS)}*nS"
+                syn = Synapses(self.layers[source_layer].get_neuron_group('E'),
+                            self.layers[target_layer].get_neuron_group('E'),
+                            on_pre=on_pre)
+                syn.connect(p=prob)
+                delay = self.config.get('time_constants', {}).get('DELAY', 0*ms)
+                try: syn.delay = delay
+                except: pass
+                self.inter_layer_synapses[connection_name] = syn
+
     
     def get_layer(self, layer_name):
         return self.layers.get(layer_name)
