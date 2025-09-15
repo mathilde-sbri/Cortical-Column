@@ -3,6 +3,7 @@
 import brian2 as b2
 from brian2 import ms, mV, Hz, nS, pA
 
+
 N_E   = 4000
 N_PV  = 500
 N_SOM = 500   
@@ -24,8 +25,8 @@ g_inh        = 4.0
 w_exc = (w_mVmsec_exc/float(TAU_S/ms)) * mV  
 w_inh = g_inh * w_exc                        
 
-w_vip_mVmsec = -6.4     
-w_vip_to_SST = (w_vip_mVmsec/float(TAU_S/ms)) * mV  
+w_vip_mVmsec = -6.4
+w_vip_to_SOM = (w_vip_mVmsec/float(TAU_S/ms)) * mV 
 
 contrast_c = 1.0
 
@@ -71,14 +72,21 @@ _LAYER_CONFIGS = {
             'SOM': N_SOM,
             'VIP': N_VIP,    
         },
-   
-        'poisson_inputs': {}, 
-    }
+        'poisson_inputs': {},
+    },
+
+    # 'L23_surround1': {
+    #     'connection_prob': P_conn_same,
+    #     'input_rate': None,
+    #     'neuron_counts': { 'E': N_E, 'PV': N_PV, 'SOM': N_SOM, 'VIP': N_VIP },
+    #     'poisson_inputs': {},
+    # },
+
 }
 
 CONFIG = {
     'simulation': {
-        'SIMULATION_TIME': 1000*ms,
+        'SIMULATION_TIME': 2000*ms,
         'DT': 0.025*ms,
         'RANDOM_SEED': 12345,
     },
@@ -156,7 +164,7 @@ CONFIG = {
             'E_SOM' :  w_exc,
             'PV_SOM':  0.0*mV, 
             'SOM_SOM': 0.0*mV, 
-            'VIP_SOM': abs(w_vip_to_SST), 
+            'VIP_SOM': abs(w_vip_to_SOM), 
             'EXT'    :  w_exc,  
         }
     },

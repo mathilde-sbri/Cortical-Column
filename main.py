@@ -40,6 +40,11 @@ def main():
 
     
     fig1 = NetworkVisualizer.plot_raster(spike_monitors, CONFIG['layers'])
+    fig_rates = NetworkVisualizer.plot_E_population_rates(spike_monitors, CONFIG['layers'])
+    fig_psd   = NetworkVisualizer.plot_E_population_psd(spike_monitors, CONFIG['layers'])
+    fig_gamma = NetworkVisualizer.plot_gamma_peaks(spike_monitors, CONFIG['layers'])
+    #fig_coh   = NetworkVisualizer.plot_gamma_coherence(spike_monitors, CONFIG['layers'], layer_pairs=[('L23','L23_surround1')])
+
     
     # fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
     
