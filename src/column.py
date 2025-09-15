@@ -10,9 +10,9 @@ class CorticalColumn:
      a cortical column with multiple layers
     """
     
-    def __init__(self, column_id=0, layer_names=None, config=None):
+    def __init__(self, column_id=0, config=None):
         self.column_id = column_id
-        self.layer_names = layer_names or ['L1', 'L23', 'L4', 'L5', 'L6']
+        self.layer_names = list(config['layers'].keys()) or ['L1', 'L23', 'L4', 'L5', 'L6']
         if config is None:
             raise ValueError("CorticalColumn requires a config dictionary. Pass CONFIG from config module.")
         self.config = config
@@ -46,25 +46,27 @@ class CorticalColumn:
                 )
     
     def _create_inter_layer_connections(self):
-        for (source_layer, target_layer), prob in self.config['inter_layer_connections'].items():
+        for (source_layer, target_layer), conns in self.config['inter_layer_connections'].items():
             if source_layer in self.layers and target_layer in self.layers:
-                connection_name = f"{source_layer}_{target_layer}"
-                is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
-                W = self.config['synapses']['Q']['E_E']
-                if is_current:
-                    on_pre = f"sE_post += {float(W/mV)}*mV"
-                else:
-                    on_pre = f"ge_post += {float(W/nS)}*nS"
-                syn = Synapses(self.layers[source_layer].get_neuron_group('E'),
-                            self.layers[target_layer].get_neuron_group('E'),
-                            on_pre=on_pre)
-                syn.connect(p=prob)
-                delay = self.config.get('time_constants', {}).get('DELAY', 0*ms)
-                try: syn.delay = delay
-                except: pass
-                self.inter_layer_synapses[connection_name] = syn
+                for conn, prob in conns.items() :
+                    connection_name = f"{source_layer}_{target_layer}_{conn}"
+                    is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
+                    W = self.config['synapses']['Q'][conn]
+                    if is_current:
+                        on_pre = f"sE_post += {float(W/mV)}*mV"
+                    else:
+                        on_pre = f"ge_post += {float(W/nS)}*nS"
+                    group1, group2 = conn.split("_")
+                    syn = Synapses(self.layers[source_layer].get_neuron_group(group1),
+                                self.layers[target_layer].get_neuron_group(group2),
+                                on_pre=on_pre)
+                    syn.connect(p=prob)
+                    delay = self.config.get('time_constants', {}).get('DELAY', 0*ms)
+                    try: syn.delay = delay
+                    except: pass
+                    self.inter_layer_synapses[connection_name] = syn
 
-    
+
     def get_layer(self, layer_name):
         return self.layers.get(layer_name)
     
