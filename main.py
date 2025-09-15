@@ -5,7 +5,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 
-from config.config_veit import CONFIG
+from config.config import CONFIG
 from src.column import CorticalColumn
 from src.visualization import NetworkVisualizer
 from src.analysis import LFPAnalysis
@@ -43,12 +43,11 @@ def main():
     fig_rates = NetworkVisualizer.plot_E_population_rates(spike_monitors, CONFIG['layers'])
     fig_psd   = NetworkVisualizer.plot_E_population_psd(spike_monitors, CONFIG['layers'])
     fig_gamma = NetworkVisualizer.plot_gamma_peaks(spike_monitors, CONFIG['layers'])
-    #fig_coh   = NetworkVisualizer.plot_gamma_coherence(spike_monitors, CONFIG['layers'], layer_pairs=[('L23','L23_surround1')])
 
     
-    # fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
+    fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
     
-    # fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
+    fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
     
     plt.show()
 

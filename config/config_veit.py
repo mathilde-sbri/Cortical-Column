@@ -37,7 +37,7 @@ sd_stim = {'E': 2.1*mV, 'PV': 2.1*mV, 'SOM': 0.0*mV}
 
 sigma_global = 0.25*mV
 
-vip_rate = 14*Hz
+vip_rate = 2*Hz
 
 EIF_EQS = """
 dv/dt = (-(v - EL) + DELTA_T*exp((v - VT)/DELTA_T) + sE - sI + mu_drive)/TAU_M
