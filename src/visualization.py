@@ -72,7 +72,7 @@ class NetworkVisualizer:
                 ax.set_xlabel('Time (ms)')
                 ax.set_ylabel('LFP (norm)')
                 ax.set_title(f'{layer_name} Local Field Potential')
-                ax.set_xlim(3000, 4000)
+                ax.set_xlim(0, 4000)
                 ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
@@ -108,168 +108,114 @@ class NetworkVisualizer:
         return fig
     
     @staticmethod
-    def _get_NE(layer_configs, layer_name):
-        return layer_configs[layer_name]['neuron_counts']['E']
 
-    @staticmethod
-    def plot_E_population_rates(spike_monitors, layer_configs, bin_ms=1.0, discard_ms=500.0,
-                                figsize=(12, 3.5)):
+    def plot_rate(rate_monitors, layer_configs, figsize=(10, 12)):
 
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        layer_names = list(layer_configs.keys()) if isinstance(layer_configs, dict) else list(rate_monitors.keys())
+        n_layers = len(layer_names) if layer_names else len(rate_monitors)
 
-        for layer_name, monitors in spike_monitors.items():
-            if 'E_spikes' not in monitors:
-                continue
-            nE = NetworkVisualizer._get_NE(layer_configs, layer_name)
-            centers, rate = SpikeAnalysis.bin_population_rate(
-                monitors['E_spikes'], nE, bin_ms=bin_ms,
-                t_stop_s=float(np.array(monitors['E_spikes'].t).max()) if monitors['E_spikes'].num_spikes > 0 else 0.0
-            )
-            if discard_ms > 0 and centers.size:
-                keep = centers * 1000.0 >= discard_ms
-                centers, rate = centers[keep], rate[keep]
+        if n_layers == 0:
+            # Nothing to plot
+            fig = plt.figure(figsize=figsize)
+            fig.suptitle("Population Rates (no data)")
+            return fig
 
-            ax.plot(centers, rate, label=f'{layer_name}')
+        fig, axes = plt.subplots(n_layers, 1, sharex=True, figsize=figsize)
+        if n_layers == 1:
+            axes = [axes]
 
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('E pop. rate (Hz/neuron)')
-        ax.set_title('Population firing rate (E)')
-        ax.legend(frameon=False)
-        ax.grid(True, alpha=0.25)
-        plt.tight_layout()
+        def _to_seconds(t):
+            try:
+                return (t / second)
+            except Exception:
+                return t
+
+        def _to_hz(r):
+            try:
+                return (r / Hz)
+            except Exception:
+                return r
+
+        for ax, layer_name in zip(axes, layer_names):
+            layer_rates = rate_monitors.get(layer_name, {})
+            plotted_any = False
+
+            for pop_key in sorted(layer_rates.keys()):
+                if pop_key == 'VIP_rate' :
+                    mon = layer_rates[pop_key]
+                    try:
+                        t = _to_seconds(mon.t)
+                        r = _to_hz(mon.rate)
+                        ax.plot(t, r, label=pop_key)
+                        plotted_any = True
+                    except Exception as e:
+                        ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")
+
+            ax.set_ylabel("Rate (Hz)")
+            title = f"Layer {layer_name} — Population Rates" if layer_name is not None else "Population Rates"
+            ax.set_title(title)
+            if plotted_any:
+                ax.legend(loc="upper right", fontsize=8, frameon=False)
+            ax.grid(True, alpha=0.3)
+
+        axes[-1].set_xlabel("Time (s)")
+        fig.tight_layout(h_pad=1.0)
         return fig
+    
+    @staticmethod
+    def plot_spectrogram(state_monitors, layer_configs, fmax=100, win_ms=250, step_ms=25,
+                         light_window=(2.0, 4.0), figsize=(12, 5)):
+
+        import matplotlib.pyplot as plt
+        figs = []
+        for layer_name, monitors in state_monitors.items():
+            if 'E_state' not in monitors:
+                continue
+            time_ms, lfp = LFPAnalysis.process_lfp(monitors['E_state'])
+            t_spec, f, Sxx = LFPAnalysis.compute_spectrogram(time_ms, lfp, fmax=fmax,
+                                                             win_ms=win_ms, step_ms=step_ms)
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+            im = ax.imshow(10*np.log10(Sxx + 1e-20), origin='lower', aspect='auto',
+                           extent=[t_spec[0], t_spec[-1], f[0], f[-1]])
+            ax.set_title(f'{layer_name} LFP Spectrogram')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Frequency (Hz)')
+            cbar = plt.colorbar(im, ax=ax)
+            cbar.set_label('Power (dB)')
+            if light_window is not None:
+                on, off = light_window
+                ax.axvline(on, color='w', ls='--', lw=1)
+                ax.axvline(off, color='w', ls='--', lw=1)
+            figs.append(fig)
+        return figs
 
     @staticmethod
-    def plot_E_population_psd(spike_monitors, layer_configs, bin_ms=1.0, discard_ms=500.0,
-                              fmax=100, normalize_dc=True, figsize=(10, 5)):
+    def plot_peak_freq_track(state_monitors, layer_configs, f_gamma=(20, 80), fmax=100,
+                             win_ms=250, step_ms=25, light_window=(2.0, 4.0), figsize=(12, 4)):
 
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-        summary_rows = []
-
-        for layer_name, monitors in spike_monitors.items():
-            if 'E_spikes' not in monitors:
+        import matplotlib.pyplot as plt
+        figs = []
+        for layer_name, monitors in state_monitors.items():
+            if 'E_state' not in monitors:
                 continue
-            nE = NetworkVisualizer._get_NE(layer_configs, layer_name)
-            out = SpikeAnalysis.gamma_metrics_from_spikes(
-                monitors['E_spikes'], nE, discard_ms=discard_ms, bin_ms=bin_ms, gamma_band=(30.0, 50.0)
-            )
-            freqs, psd = out['freqs'], out['psd']
-            if freqs.size == 0:
-                continue
+            time_ms, lfp = LFPAnalysis.process_lfp(monitors['E_state'])
+            t_spec, f, Sxx = LFPAnalysis.compute_spectrogram(time_ms, lfp, fmax=fmax,
+                                                             win_ms=win_ms, step_ms=step_ms)
+            peak_f, peak_p = LFPAnalysis.peak_frequency_track(f, Sxx, f_gamma=f_gamma)
 
-            mask = freqs <= fmax
-            ax.plot(freqs[mask], psd[mask], label=f'{layer_name}')
-            if not np.isnan(out['f_peak']):
-                ax.axvline(out['f_peak'], linestyle='--', alpha=0.6)
-                summary_rows.append((layer_name, out['f_peak'], out['gamma_power']))
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+            ax.plot(t_spec, peak_f, lw=2)
+            ax.set_title(f'{layer_name} Gamma Peak Frequency ({f_gamma[0]}–{f_gamma[1]} Hz)')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Peak freq (Hz)')
+            if light_window is not None:
+                on, off = light_window
+                ax.axvline(on, color='k', ls='--', lw=1)
+                ax.axvline(off, color='k', ls='--', lw=1)
+            ax.set_ylim(f_gamma[0], f_gamma[1])
+            ax.grid(alpha=0.3)
+            figs.append(fig)
+        return figs
 
-        ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel('Normalized power' if normalize_dc else 'Power')
-        ax.set_title('E population rate — PSD (1 ms bins)')
-        ax.legend(frameon=False)
-        ax.grid(True, alpha=0.25)
-        plt.tight_layout()
-
-        if summary_rows:
-            print("Gamma peaks:")
-            for name, fpk, gpow in summary_rows:
-                print(f"  {name:>16s}: {fpk:5.1f} Hz | power {gpow:.3f}")
-
-        return fig
-
-    @staticmethod
-    def plot_gamma_peaks(spike_monitors, layer_configs, bin_ms=1.0, discard_ms=500.0,
-                         figsize=(8, 4)):
-
-        labels, powers, peaks = [], [], []
-        for layer_name, monitors in spike_monitors.items():
-            if 'E_spikes' not in monitors:
-                continue
-            nE = NetworkVisualizer._get_NE(layer_configs, layer_name)
-            out = SpikeAnalysis.gamma_metrics_from_spikes(
-                monitors['E_spikes'], nE, discard_ms=discard_ms, bin_ms=bin_ms, gamma_band=(30.0, 50.0)
-            )
-            if np.isnan(out['gamma_power']):
-                continue
-            labels.append(layer_name)
-            powers.append(out['gamma_power'])
-            peaks.append(out['f_peak'])
-
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-        ax.bar(np.arange(len(powers)), powers)
-        ax.set_xticks(np.arange(len(labels)), labels, rotation=0)
-        ax.set_ylabel('Gamma power (norm.)')
-        ax.set_title('Gamma peak power (30–50 Hz)')
-
-        for i, fpk in enumerate(peaks):
-            if not np.isnan(fpk):
-                ax.text(i, powers[i], f'{fpk:.1f} Hz', ha='center', va='bottom', fontsize=9)
-
-        plt.tight_layout()
-        return fig
-
-    @staticmethod
-    def plot_gamma_coherence(spike_monitors, layer_configs, layer_pairs,
-                             bin_ms=1.0, discard_ms=500.0, fmax=100, figsize=(10, 4.5)):
-
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-
-        for (la, lb) in layer_pairs:
-            if la not in spike_monitors or lb not in spike_monitors:
-                continue
-            if 'E_spikes' not in spike_monitors[la] or 'E_spikes' not in spike_monitors[lb]:
-                continue
-
-            nEa = NetworkVisualizer._get_NE(layer_configs, la)
-            nEb = NetworkVisualizer._get_NE(layer_configs, lb)
-
-            coh_out = SpikeAnalysis.gamma_coherence_between_sites(
-                spike_monitors[la]['E_spikes'], nEa,
-                spike_monitors[lb]['E_spikes'], nEb,
-                discard_ms=discard_ms, bin_ms=bin_ms, ref_peak_from=None  
-            )
-
-            freqs, coh = coh_out['freqs'], coh_out['coh']
-            if freqs.size == 0:
-                continue
-
-            mask = freqs <= fmax
-            ax.plot(freqs[mask], coh[mask], label=f'{la} ↔ {lb}  (C@{coh_out["f_ref"]:.1f}Hz={coh_out["coh_at_peak"]:.2f})')
-
-        ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel('Coherence')
-        ax.set_ylim(0, 1.02)
-        ax.set_title('Gamma coherence between sites (E population rates)')
-        ax.legend(frameon=False, fontsize=9)
-        ax.grid(True, alpha=0.25)
-        plt.tight_layout()
-        return fig
-
-
-    @staticmethod
-    def build_psd_inputs_from_spikes(spike_monitors, layer_configs, bin_ms=1.0, discard_ms=500.0):
-
-        out = {}
-        for layer_name, monitors in spike_monitors.items():
-            if 'E_spikes' not in monitors:
-                continue
-            nE = NetworkVisualizer._get_NE(layer_configs, layer_name)
-            res = SpikeAnalysis.gamma_metrics_from_spikes(
-                monitors['E_spikes'], nE, discard_ms=discard_ms, bin_ms=bin_ms, gamma_band=(30.0, 50.0)
-            )
-            if res['freqs'].size:
-                out[layer_name] = (res['freqs'], res['psd'])
-        return out
-
-
-    @staticmethod
-    def plot_population_psd(pop_rate_dict, fmax=100, title='Population PSDs', figsize=(10, 5)):
-        plt.figure(figsize=figsize)
-        for name, (freqs, psd) in pop_rate_dict.items():
-            mask = freqs <= fmax
-            plt.plot(freqs[mask], psd[mask], label=name)
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Normalized power')
-        plt.title(title)
-        plt.legend(frameon=False)
-        plt.tight_layout()
+        
+        

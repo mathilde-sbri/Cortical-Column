@@ -3,30 +3,7 @@ from brian2 import *
 
 
 _LAYER_CONFIGS = {
-    'L1': {
-        'connection_prob': {
-            'E_E': 0.034,
-            'E_PV': 0.068,  
-            'E_SOM': 0.034,
-            'E_VIP': 0.034,
-            'PV_E': 0.034,
-            'PV_PV': 0.034,
-            'SOM_E': 0.034,
-            'SOM_PV': 0.034,
-            'VIP_SOM': 0.034,
-        },
-        'input_rate': 5*Hz,
-        'neuron_counts': {
-            'E': 8,
-            'PV': 1,
-            'SOM': 1,
-            'VIP': 39
-        },
-        'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-        }
-    },
+   
     'L23': {
         'connection_prob': {
             'E_E': 0.034,
@@ -41,96 +18,24 @@ _LAYER_CONFIGS = {
         },
         'input_rate': 5*Hz,
         'neuron_counts': {
-            'E': 3520,
-            'PV': 317,
-            'SOM': 475,
-            'VIP': 88
+            'E': 4000,
+            'PV': 500,
+            'SOM': 500,
+            'VIP': 500
         },
         'poisson_inputs': {
             'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
             'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-        }
-    },
-    'L4': {
-        'connection_prob': {
-            'E_E': 0.034,
-            'E_PV': 0.068,
-            'E_SOM': 0.034,
-            'E_VIP': 0.034,
-            'PV_E': 0.034,
-            'PV_PV': 0.034,
-            'SOM_E': 0.034,
-            'SOM_PV': 0.034,
-            'VIP_SOM': 0.034,
-        },
-        'input_rate': 5*Hz,
-        'neuron_counts': {
-            'E': 5760,
-            'PV': 950,
-            'SOM': 420,
-            'VIP': 70
-        },
-        'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-        }
-    },
-    'L5': {
-        'connection_prob': {
-            'E_E': 0.017,
-            'E_PV': 0.034,
-            'E_SOM': 0.017,
-            'E_VIP': 0.017,
-            'PV_E': 0.017,
-            'PV_PV': 0.017,
-            'SOM_E': 0.017,
-            'SOM_PV': 0.017,
-            'VIP_SOM': 0.017,
-        },
-        'input_rate': 5*Hz,
-        'neuron_counts': {
-            'E': 1600,
-            'PV': 208,
-            'SOM': 152,
-            'VIP': 40
-        },
-        'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-        }
-    },
-    'L6': {
-        'connection_prob': {
-            'E_E': 0.017,
-            'E_PV': 0.034,
-            'E_SOM': 0.017,
-            'E_VIP': 0.017,
-            'PV_E': 0.017,
-            'PV_PV': 0.017,
-            'SOM_E': 0.017,
-            'SOM_PV': 0.017,
-            'VIP_SOM': 0.017,
-        },
-        'input_rate': 5*Hz,
-        'neuron_counts': {
-            'E': 2040,
-            'PV': 187,
-            'SOM': 137,
-            'VIP': 36
-        },
-        'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+        
         }
     }
+
+
+
+
 }
 
 _INTER_LAYER_CONNECTIONS = {
-    ('L4', 'L23'): {'E_E': 0.002, 'E_PV': 0.001},
-    ('L23', 'L5'): {'E_E': 0.002, 'E_PV': 0.001},
-    ('L5', 'L6'): {'E_E': 0.002, 'E_PV': 0.001},
-    ('L6', 'L4'): {'E_E': 0.002, 'E_SOM': 0.001},
-    ('L6', 'L23'): {'E_E': 0.002, 'E_SOM': 0.001}
 }
 
 # common_namespace variables 
@@ -206,7 +111,10 @@ CONFIG = {
         gL : siemens
             """,
             'VIP': """
-        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + I)/C : volt (unless refractory)
+        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + (I + I_bias_VIP - I_light*light_level))/C : volt (unless refractory)
+        I_bias_VIP : amp (constant)
+        I_light    : amp (constant)
+        light_level : 1
         IsynE=ge*(Ee-v) : amp
         IsynI=gi*(Ei-v) : amp
         dge/dt = -ge/tau_e_vip : siemens
@@ -236,9 +144,16 @@ CONFIG = {
             'V_reset': v_reset,
             'Ee': ee,
             'Ei': ei,
-        },
+        }, 
 
     },
+    'light_protocol': {
+        'onset': 2*second,
+        'offset': 3*second,
+        'I_bias_VIP': 50*pA,
+        'I_light': 250*pA
+    },
+
     'intrinsic_params': {
         'E':   {'a': 4*nS, 'b': 130*pA, 'DeltaT': 2*mV},
         'PV':  {'a': 0*nS, 'b': 0*pA, 'DeltaT': 0.5*mV},
@@ -285,7 +200,7 @@ CONFIG = {
             'E_E': 1.25*nS,
             'E_PV': 3.75*nS,
             'E_SOM': 2.5*nS,
-            'E_VIP': 1.5*nS,
+            'E_VIP': 2.5*nS,
             'VIP_SOM': 5.0*nS,
             'EXT': 1.25*nS,
         }
