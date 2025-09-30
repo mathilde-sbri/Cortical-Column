@@ -19,7 +19,6 @@ def main():
     print("Creating cortical column...")
     column = CorticalColumn(column_id=0, config=CONFIG)
     
-    # Not sure this is actually useful, to check
     all_monitors = column.get_all_monitors()
     
     print("Running simulation...")
@@ -28,6 +27,7 @@ def main():
     
     spike_monitors = {}
     state_monitors = {}
+    rate_monitors = {}
     
     for layer_name, monitors in all_monitors.items():
         spike_monitors[layer_name] = {
@@ -35,6 +35,9 @@ def main():
         }
         state_monitors[layer_name] = {
             k: v for k, v in monitors.items() if 'state' in k
+        }
+        rate_monitors[layer_name] = {
+            k: v for k, v in monitors.items() if 'rate' in k
         }
     
 
@@ -45,6 +48,8 @@ def main():
     fig2 = NetworkVisualizer.plot_lfp(state_monitors, CONFIG['layers'])
     
     fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
+    fig4 = NetworkVisualizer.plot_power_spectra_loglog(state_monitors, CONFIG['layers'])
+    fig5 = NetworkVisualizer.plot_rate(rate_monitors, CONFIG['layers'])
     
     plt.show()
 

@@ -73,11 +73,12 @@ class CorticalLayer:
             set_if_exists(g, 'a',      ip.get('a', 0*nS))
             set_if_exists(g, 'b',      ip.get('b', 0*pA))
             set_if_exists(g, 'DeltaT', ip.get('DeltaT', 2*mV))
+            set_if_exists(g, 'EL', ip.get('EL', -60*mV))
+            set_if_exists(g, 'gL', ip.get('gL', 8*nS))
+            set_if_exists(g, 'C', ip.get('C', 200*pF))
+            set_if_exists(g, 'tauw', ip.get('tauw', 200*ms))
 
-            eleak_map = neurons_cfg.get('E_LEAK', {})
-            set_if_exists(g, 'EL', eleak_map.get(pop_name, neurons_cfg.get('INITIAL_VOLTAGE', -60*mV)))
-            set_if_exists(g, 'C',  neurons_cfg.get('CAPACITANCE', 200*pA*ms/mV))
-            set_if_exists(g, 'gL', neurons_cfg.get('LEAK_CONDUCTANCE', 10*nS))
+
 
             ic_default = ic_all.get('DEFAULT', {})
             ic_pop     = ic_all.get(pop_name, {})
@@ -99,14 +100,15 @@ class CorticalLayer:
                 set_if_exists(g, 'mu_drive',   mu)
                 set_if_exists(g, 'sigma_drive', sigma)
 
-    def _on_pre(self, weight_key, inhibitory=False):
+    def _on_pre(self, weight_key, excitatory=False):
         W = self.config['synapses']['Q'][weight_key]
-        if self.is_current:
-            var = 'sI' if inhibitory else 'sE'
+        if self.is_current: # TP CHANGE to ACCOunt FOR PV SOM CONDUCTANCES ETC
+            var = 'sI' if not excitatory else 'sE'
             val = float(W / mV)
             return f"{var}_post += {val}*mV"
         else:
-            var = 'gi' if inhibitory else 'ge'
+            pre, post = weight_key.split('_')
+            var = 'g' + pre
             val = float(W / nS)
             return f"{var}_post += {val}*nS"
 
@@ -123,10 +125,10 @@ class CorticalLayer:
             pre, post = connection.split('_')
             if pre not in self.neuron_groups or post not in self.neuron_groups:
                 continue
-            inhibitory = (pre != 'E')
+            excitatory = (pre == 'E')
             syn = Synapses(
                 self.neuron_groups[pre], self.neuron_groups[post],
-                on_pre=self._on_pre(connection, inhibitory=inhibitory)
+                on_pre=self._on_pre(connection, excitatory=excitatory)
             )
             syn.connect(p=float(p))
             self._apply_delay(syn)
@@ -158,7 +160,7 @@ class CorticalLayer:
 
     def _create_monitors(self):
         for pop_name, group in self.neuron_groups.items():
-            vars_to_record = ['v', 'ge', 'gi'] if not self.is_current else ['v', 'sE', 'sI']
+            vars_to_record = ['v', 'gE', 'gI'] if not self.is_current else ['v', 'sE', 'sI']
             self.monitors[f'{pop_name}_state'] = StateMonitor(group, vars_to_record, record=True)
             self.monitors[f'{pop_name}_spikes'] = SpikeMonitor(group, variables='t')
             self.monitors[f'{pop_name}_rate']   = PopulationRateMonitor(group)

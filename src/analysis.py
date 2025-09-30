@@ -9,9 +9,9 @@ class LFPAnalysis:
     
     @staticmethod
     def calculate_lfp(monitor, neuron_type='E'):
-        """Calculate LFP using current inputs, inspired from the paper of Mazzoni but need to check if it's exactly the same"""
-        ge = np.array(monitor.ge/nS)  
-        gi = np.array(monitor.gi/nS)  
+        """Calculate LFP using current inputs, inspired from the paper of Mazzoni"""
+        ge = np.array(monitor.gE/nS)  
+        gi = np.array(monitor.gI/nS)  
         V = np.array(monitor.v/mV)
         
         I_AMPA = np.abs(ge * (0 - V))  # Ee = 0mV
@@ -38,6 +38,17 @@ class LFPAnalysis:
         freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg, noverlap=nperseg//2)
 
         return freq, psd
+    
+    @staticmethod
+    def power_spectrum_loglog(lfp_signal, time_ms, fmin=1, fmax=500, nperseg=4096, ax=None):
+        
+        t_s = np.asarray(time_ms) / 1000.0
+        fs = 1.0 / np.median(np.diff(t_s))
+
+        freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg, noverlap=nperseg//2)
+
+        return freq, psd
+
     
     @staticmethod
     def compute_spectrogram(time_ms, lfp, fmax=100, win_ms=500, step_ms=10, nfft=None):

@@ -27,7 +27,7 @@ class CorticalColumn:
     def _assemble_network(self):
         """Collect all components into the network"""
         # Add all components from each layer
-        # This is necessary when working with classes, because brian2's run function expects all components to be created in the same file. So I need to bypass that
+        # This is necessary when working with classes, because i guess brian2's run function expects all components to be created in the same file ? not sure
         for layer in self.layers.values():
             self.network.add(*layer.neuron_groups.values())
             self.network.add(*layer.synapses.values())
@@ -55,7 +55,7 @@ class CorticalColumn:
                     if is_current:
                         on_pre = f"sE_post += {float(W/mV)}*mV"
                     else:
-                        on_pre = f"ge_post += {float(W/nS)}*nS"
+                        on_pre = f"gE_post += {float(W/nS)}*nS"
                     group1, group2 = conn.split("_")
                     syn = Synapses(self.layers[source_layer].get_neuron_group(group1),
                                 self.layers[target_layer].get_neuron_group(group2),

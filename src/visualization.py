@@ -108,6 +108,35 @@ class NetworkVisualizer:
         return fig
     
     @staticmethod
+    def plot_power_spectra_loglog(state_monitors, layer_configs, figsize=(10,12)):
+        fig, axes = plt.subplots(len(state_monitors), 1, figsize=figsize)
+        if len(state_monitors) == 1:
+            axes = [axes]
+        
+        colors = ['b', 'g', 'purple', 'orange', 'red']
+        fmin=1
+        fmax=200
+
+        for i, (layer_name, monitors) in enumerate(state_monitors.items()):
+            if 'E_state' in monitors:
+                time_stable , lfp_stable = LFPAnalysis.process_lfp(monitors['E_state'])
+                freq, psd = LFPAnalysis.power_spectrum_loglog(lfp_stable, time_stable)
+                
+                ax = axes[i]
+                color = colors[i % len(colors)]
+                mask = (freq >= fmin) & (freq <= fmax)
+                ax.loglog(freq[mask], psd[mask], lw=2, color=color, label=layer_name)
+                ax.set_xlabel("Frequency (Hz)")
+                ax.set_ylabel("Power (a.u.)")
+                ax.set_title("LFP Power Spectrum (log–log)")
+                ax.grid(True, which="both", ls="--", alpha=0.5)
+        
+        axes[-1].set_xlabel('Frequency (Hz)', fontsize=18)
+        plt.tight_layout()
+        return fig
+
+    
+    @staticmethod
 
     def plot_rate(rate_monitors, layer_configs, figsize=(10, 12)):
 
@@ -141,15 +170,14 @@ class NetworkVisualizer:
             plotted_any = False
 
             for pop_key in sorted(layer_rates.keys()):
-                if pop_key == 'VIP_rate' :
-                    mon = layer_rates[pop_key]
-                    try:
-                        t = _to_seconds(mon.t)
-                        r = _to_hz(mon.rate)
-                        ax.plot(t, r, label=pop_key)
-                        plotted_any = True
-                    except Exception as e:
-                        ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")
+                mon = layer_rates[pop_key]
+                try:
+                    t = _to_seconds(mon.t)
+                    r = _to_hz(mon.rate)
+                    ax.plot(t, r, label=pop_key)
+                    plotted_any = True
+                except Exception as e:
+                    ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")
 
             ax.set_ylabel("Rate (Hz)")
             title = f"Layer {layer_name} — Population Rates" if layer_name is not None else "Population Rates"

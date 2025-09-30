@@ -1,12 +1,10 @@
-
 from brian2 import *
-
 
 _LAYER_CONFIGS = {
     'L1': {
         'connection_prob': {
             'E_E': 0.034,
-            'E_PV': 0.068,  
+            'E_PV': 0.034,
             'E_SOM': 0.034,
             'E_VIP': 0.034,
             'PV_E': 0.034,
@@ -23,14 +21,14 @@ _LAYER_CONFIGS = {
             'VIP': 39
         },
         'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
         }
     },
     'L23': {
         'connection_prob': {
             'E_E': 0.034,
-            'E_PV': 0.068,
+            'E_PV': 0.034,
             'E_SOM': 0.034,
             'E_VIP': 0.034,
             'PV_E': 0.034,
@@ -47,14 +45,14 @@ _LAYER_CONFIGS = {
             'VIP': 88
         },
         'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
         }
     },
     'L4': {
         'connection_prob': {
             'E_E': 0.034,
-            'E_PV': 0.068,
+            'E_PV': 0.034,
             'E_SOM': 0.034,
             'E_VIP': 0.034,
             'PV_E': 0.034,
@@ -71,21 +69,21 @@ _LAYER_CONFIGS = {
             'VIP': 70
         },
         'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
         }
     },
     'L5': {
         'connection_prob': {
-            'E_E': 0.017,
+            'E_E': 0.034,
             'E_PV': 0.034,
-            'E_SOM': 0.017,
-            'E_VIP': 0.017,
-            'PV_E': 0.017,
-            'PV_PV': 0.017,
-            'SOM_E': 0.017,
-            'SOM_PV': 0.017,
-            'VIP_SOM': 0.017,
+            'E_SOM': 0.034,
+            'E_VIP': 0.034,
+            'PV_E': 0.034,
+            'PV_PV': 0.034,
+            'SOM_E': 0.034,
+            'SOM_PV': 0.034,
+            'VIP_SOM': 0.034,
         },
         'input_rate': 5*Hz,
         'neuron_counts': {
@@ -95,21 +93,21 @@ _LAYER_CONFIGS = {
             'VIP': 40
         },
         'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
         }
     },
     'L6': {
         'connection_prob': {
-            'E_E': 0.017,
+            'E_E': 0.034,
             'E_PV': 0.034,
-            'E_SOM': 0.017,
-            'E_VIP': 0.017,
-            'PV_E': 0.017,
-            'PV_PV': 0.017,
-            'SOM_E': 0.017,
-            'SOM_PV': 0.017,
-            'VIP_SOM': 0.017,
+            'E_SOM': 0.034,
+            'E_VIP': 0.034,
+            'PV_E': 0.034,
+            'PV_PV': 0.034,
+            'SOM_E': 0.034,
+            'SOM_PV': 0.034,
+            'VIP_SOM': 0.034,
         },
         'input_rate': 5*Hz,
         'neuron_counts': {
@@ -119,32 +117,27 @@ _LAYER_CONFIGS = {
             'VIP': 36
         },
         'poisson_inputs': {
-            'E':  {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'ge', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
         }
     }
 }
 
 _INTER_LAYER_CONNECTIONS = {
-    ('L4', 'L23'): {'E_E': 0.002, 'E_PV': 0.001},
-    ('L23', 'L5'): {'E_E': 0.002, 'E_PV': 0.001},
-    ('L5', 'L6'): {'E_E': 0.002, 'E_PV': 0.001},
-    ('L6', 'L4'): {'E_E': 0.002, 'E_SOM': 0.001},
-    ('L6', 'L23'): {'E_E': 0.002, 'E_SOM': 0.001}
+    ('L4', 'L23'): {'E_E': 0.005, 'E_PV': 0.002},
+    ('L23', 'L5'): {'E_E': 0.005, 'E_PV': 0.001},
+    ('L5', 'L6'): {'E_E': 0.005, 'E_PV': 0.002}, #TO ADD L5 SOM, PV----> L23 E (cf tremblay)
 }
 
-# common_namespace variables 
-tau_e_e = 5*ms
-tau_i = 5*ms
-tau_e_pv = 1*ms
-tau_e_som = 2*ms
-tau_e_vip = 2*ms
+tau_e_AMPA = 5*ms
+tau_i_PV   = 6*ms
+tau_i_SOM  = 30*ms
+tau_i_VIP  = 8*ms
 v_reset = -65.*mV
 vt = -50.*mV
 ee = 0.*mV
 ei = -80.*mV
 t_ref = 5*ms
-tau_w = 500*ms
 
 CONFIG = {
     'simulation': {
@@ -155,11 +148,17 @@ CONFIG = {
     'models': {
         'equations': {
             'E': """
-        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + I)/C : volt (unless refractory)
-        IsynE=ge*(Ee-v) : amp
-        IsynI=gi*(Ei-v) : amp
-        dge/dt = -ge/tau_e : siemens
-        dgi/dt = -gi/tau_i : siemens
+        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + gE*(Ee - v) - (gPV + gSOM + gVIP)*(v - Ei) - w + I)/C : volt (unless refractory)
+        IsynE   = gE*(Ee - v) : amp
+        IsynIPV = gPV*(Ei - v) : amp
+        IsynISOM= gSOM*(Ei - v) : amp
+        IsynIVIP= gVIP*(Ei - v) : amp
+        gI = gPV + gSOM + gVIP : siemens
+        IsynI   = gI*(Ei - v) : amp
+        dgE/dt   = -gE/tau_e_AMPA : siemens
+        dgPV/dt  = -gPV/tau_i_PV  : siemens
+        dgSOM/dt = -gSOM/tau_i_SOM: siemens
+        dgVIP/dt = -gVIP/tau_i_VIP: siemens
         dw/dt = (a*(v - EL) - w)/tauw : amp
         taum= C/gL : second
         I : amp
@@ -170,13 +169,20 @@ CONFIG = {
         EL : volt
         C : farad
         gL : siemens
+        tauw : second
             """,
             'PV': """
-        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + I)/C : volt (unless refractory)
-        IsynE=ge*(Ee-v) : amp
-        IsynI=gi*(Ei-v) : amp
-        dge/dt = -ge/tau_e_pv : siemens
-        dgi/dt = -gi/tau_i : siemens
+        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + gE*(Ee - v) - (gPV + gSOM + gVIP)*(v - Ei) - w + I)/C : volt (unless refractory)
+        IsynE   = gE*(Ee - v) : amp
+        IsynIPV = gPV*(Ei - v) : amp
+        IsynISOM= gSOM*(Ei - v) : amp
+        IsynIVIP= gVIP*(Ei - v) : amp
+        gI = gPV + gSOM + gVIP : siemens
+        IsynI   = gI*(Ei - v) : amp
+        dgE/dt   = -gE/tau_e_AMPA : siemens
+        dgPV/dt  = -gPV/tau_i_PV  : siemens
+        dgSOM/dt = -gSOM/tau_i_SOM: siemens
+        dgVIP/dt = -gVIP/tau_i_VIP: siemens
         dw/dt = (a*(v - EL) - w)/tauw : amp
         taum= C/gL : second
         I : amp
@@ -187,13 +193,20 @@ CONFIG = {
         EL : volt
         C : farad
         gL : siemens
+        tauw : second
             """,
             'SOM': """
-        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + I)/C : volt (unless refractory)
-        IsynE=ge*(Ee-v) : amp
-        IsynI=gi*(Ei-v) : amp
-        dge/dt = -ge/tau_e_som : siemens
-        dgi/dt = -gi/tau_i : siemens
+        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + gE*(Ee - v) - (gPV + gSOM + gVIP)*(v - Ei) - w + I)/C : volt (unless refractory)
+        IsynE   = gE*(Ee - v) : amp
+        IsynIPV = gPV*(Ei - v) : amp
+        IsynISOM= gSOM*(Ei - v) : amp
+        IsynIVIP= gVIP*(Ei - v) : amp
+        gI = gPV + gSOM + gVIP : siemens
+        IsynI   = gI*(Ei - v) : amp
+        dgE/dt   = -gE/tau_e_AMPA : siemens
+        dgPV/dt  = -gPV/tau_i_PV  : siemens
+        dgSOM/dt = -gSOM/tau_i_SOM: siemens
+        dgVIP/dt = -gVIP/tau_i_VIP: siemens
         dw/dt = (a*(v - EL) - w)/tauw : amp
         taum= C/gL : second
         I : amp
@@ -204,13 +217,20 @@ CONFIG = {
         EL : volt
         C : farad
         gL : siemens
+        tauw : second
             """,
             'VIP': """
-        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + ge*(Ee-v)+ gi*(Ei-v) - w + I)/C : volt (unless refractory)
-        IsynE=ge*(Ee-v) : amp
-        IsynI=gi*(Ei-v) : amp
-        dge/dt = -ge/tau_e_vip : siemens
-        dgi/dt = -gi/tau_i : siemens
+        dv/dt = (gL*(EL - v) + gL*DeltaT*exp((v - VT)/DeltaT) + gE*(Ee - v) - (gPV + gSOM + gVIP)*(v - Ei) - w + I)/C : volt (unless refractory)
+        IsynE   = gE*(Ee - v) : amp
+        IsynIPV = gPV*(Ei - v) : amp
+        IsynISOM= gSOM*(Ei - v) : amp
+        IsynIVIP= gVIP*(Ei - v) : amp
+        gI = gPV + gSOM + gVIP : siemens
+        IsynI   = gI*(Ei - v) : amp
+        dgE/dt   = -gE/tau_e_AMPA : siemens
+        dgPV/dt  = -gPV/tau_i_PV  : siemens
+        dgSOM/dt = -gSOM/tau_i_SOM: siemens
+        dgVIP/dt = -gVIP/tau_i_VIP: siemens
         dw/dt = (a*(v - EL) - w)/tauw : amp
         taum= C/gL : second
         I : amp
@@ -221,29 +241,27 @@ CONFIG = {
         EL : volt
         C : farad
         gL : siemens
+        tauw : second
             """,
         },
         'threshold': 'v>Vcut',
         'reset': 'v=V_reset; w+=b',
         'common_namespace' : {
-            'tau_e': tau_e_e,
-            'tau_i': tau_i,
-            'tau_e_pv': tau_e_pv,
-            'tau_e_som': tau_e_som,
-            'tau_e_vip': tau_e_vip,
-            'tauw': tau_w,
+            'tau_e_AMPA': tau_e_AMPA,
+            'tau_i_PV': tau_i_PV,
+            'tau_i_SOM': tau_i_SOM,
+            'tau_i_VIP': tau_i_VIP,
             'VT': vt,
             'V_reset': v_reset,
             'Ee': ee,
             'Ei': ei,
         },
-
     },
     'intrinsic_params': {
-        'E':   {'a': 4*nS, 'b': 130*pA, 'DeltaT': 2*mV},
-        'PV':  {'a': 0*nS, 'b': 0*pA, 'DeltaT': 0.5*mV},
-        'SOM': {'a': 4*nS, 'b': 25*pA, 'DeltaT': 1.5*mV},
-        'VIP': {'a': 2*nS, 'b': 50*pA, 'DeltaT': 2*mV},
+        'E':   {'a': 4*nS, 'b': 130*pA, 'DeltaT': 2*mV, 'C': 200*pF, 'gL': 8*nS, 'tauw': 200*ms, 'EL': -60*mV},
+        'PV':  {'a': 0*nS, 'b': 0*pA,   'DeltaT': 0.5*mV, 'C': 120*pF, 'gL': 12*nS, 'tauw': 50*ms, 'EL': -60*mV},
+        'SOM': {'a': 4*nS, 'b': 25*pA,  'DeltaT': 1.5*mV, 'C': 220*pF, 'gL': 7*nS, 'tauw': 300*ms, 'EL': -55*mV},
+        'VIP': {'a': 2*nS, 'b': 50*pA,  'DeltaT': 2*mV, 'C': 150*pF, 'gL': 10*nS, 'tauw': 150*ms, 'EL': -65*mV},
     },
     'neurons': {
         'V_RESET': -65.*mV,
@@ -251,30 +269,20 @@ CONFIG = {
         'EE': 0.*mV,
         'EI': -80.*mV,
         'T_REF': 5*ms,
-        'TAU_W': 500*ms,
-        'CAPACITANCE': 200*pF,
-        'LEAK_CONDUCTANCE': 10*nS,
         'INITIAL_VOLTAGE': -60*mV,
-        'E_LEAK': {
-            'E': -60*mV,   
-            'PV': -60*mV,  
-            'SOM': -55*mV, 
-            'VIP': -65*mV,
-        },
     },
     'initial_conditions': {
-        'DEFAULT': {'v': -60*mV, 'ge': 0*nS, 'gi': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'E':   {'v': -60*mV, 'ge': 0*nS, 'gi': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'PV':  {'v': -60*mV, 'ge': 0*nS, 'gi': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'SOM': {'v': -60*mV, 'ge': 0*nS, 'gi': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'VIP': {'v': -60*mV, 'ge': 0*nS, 'gi': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
+        'DEFAULT': {'v': -60*mV, 'gE': 0*nS, 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
+        'E':   {'v': -60*mV, 'gE': 0*nS, 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
+        'PV':  {'v': -60*mV, 'gE': 0*nS, 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
+        'SOM': {'v': -60*mV, 'gE': 0*nS, 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
+        'VIP': {'v': -60*mV, 'gE': 0*nS, 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS, 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
     },
     'time_constants': {
-        'E': tau_e_e,
-        'I': tau_i,
-        'E_PV': tau_e_pv,
-        'E_SOM': tau_e_som,
-        'E_VIP': tau_e_vip,
+        'E_AMPA': tau_e_AMPA,
+        'I_PV': tau_i_PV,
+        'I_SOM': tau_i_SOM,
+        'I_VIP': tau_i_VIP,
     },
     'synapses': {
         'Q': {
@@ -288,9 +296,9 @@ CONFIG = {
             'E_VIP': 1.5*nS,
             'VIP_SOM': 5.0*nS,
             'EXT': 1.25*nS,
-        }
+        },
+       
     },
     'layers': _LAYER_CONFIGS,
     'inter_layer_connections': _INTER_LAYER_CONNECTIONS,
 }
-
