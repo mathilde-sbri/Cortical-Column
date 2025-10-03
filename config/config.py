@@ -125,8 +125,8 @@ _LAYER_CONFIGS = {
 
 _INTER_LAYER_CONNECTIONS = {
     ('L4', 'L23'): {'E_E': 0.005, 'E_PV': 0.002},
-    ('L23', 'L5'): {'E_E': 0.005, 'E_PV': 0.001},
-    ('L5', 'L6'): {'E_E': 0.005, 'E_PV': 0.002}, #TO ADD L5 SOM, PV----> L23 E (cf tremblay)
+    ('L23', 'L5'): {'E_E': 0.01, 'E_PV': 0.001},
+    ('L5', 'L23'): {'SOM_E': 0.005, 'PV_E': 0.002},  
 }
 
 tau_e_AMPA = 5*ms

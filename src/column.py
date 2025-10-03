@@ -44,18 +44,31 @@ class CorticalColumn:
                     layer_name,
                     self.config
                 )
+
+    def _on_pre(self, weight_key, excitatory=False):
+        W = self.config['synapses']['Q'][weight_key]
     
+        pre, post = weight_key.split('_')
+        var = 'g' + pre
+        val = float(W / nS)
+        return f"{var}_post += {val}*nS"
+    
+
+
     def _create_inter_layer_connections(self):
         for (source_layer, target_layer), conns in self.config['inter_layer_connections'].items():
             if source_layer in self.layers and target_layer in self.layers:
                 for conn, prob in conns.items() :
+                    print(conn)
+                    pre, post = conn.split('_')
+                    excitatory = (pre == 'E')
                     connection_name = f"{source_layer}_{target_layer}_{conn}"
                     is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
                     W = self.config['synapses']['Q'][conn]
                     if is_current:
                         on_pre = f"sE_post += {float(W/mV)}*mV"
                     else:
-                        on_pre = f"gE_post += {float(W/nS)}*nS"
+                        on_pre = self._on_pre(conn, excitatory=excitatory)
                     group1, group2 = conn.split("_")
                     syn = Synapses(self.layers[source_layer].get_neuron_group(group1),
                                 self.layers[target_layer].get_neuron_group(group2),
