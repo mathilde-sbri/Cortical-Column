@@ -139,9 +139,9 @@ class CorticalLayer:
         for pop_name, pconf in pinputs.items():
             if pop_name not in self.neuron_groups:
                 continue
-            target_var = pconf.get('target', 'ge')
+            target_var = pconf.get('target', 'gE')
             if self.is_current:
-                target_var = {'ge': 'sE', 'gi': 'sI'}.get(target_var, target_var)
+                target_var = {'gE': 'sE', 'gI': 'sI'}.get(target_var, target_var)
 
             if 'N' in pconf and pconf['N'] is not None:
                 N = int(pconf['N'])
@@ -154,9 +154,23 @@ class CorticalLayer:
             weight = self.config['synapses']['Q'][w_cfg] if isinstance(w_cfg, str) else w_cfg
             rate = pconf.get('rate', self.layer_config.get('input_rate', 0*Hz))
 
-            self.poisson_inputs[pop_name] = PoissonInput(
-                self.neuron_groups[pop_name], target_var, N=N, rate=rate, weight=weight
-            )
+            poisson_group = PoissonGroup(N, rates=rate)
+            
+            excitatory = (target_var in ['gE', 'sE'])
+            if self.is_current:
+                val = float(weight / mV)
+                on_pre_eq = f"{target_var}_post += {val}*mV"
+            else:
+                val = float(weight / nS)
+                on_pre_eq = f"{target_var}_post += {val}*nS"
+            
+            syn = Synapses(poisson_group, self.neuron_groups[pop_name], on_pre=on_pre_eq)
+            syn.connect()  
+            
+            self.poisson_inputs[pop_name] = {
+                'group': poisson_group,
+                'synapses': syn
+            }
 
     def _create_monitors(self):
         for pop_name, group in self.neuron_groups.items():

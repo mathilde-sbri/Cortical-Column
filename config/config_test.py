@@ -291,6 +291,7 @@ CONFIG = {
             'Ei': ei,
         },
     },
+
     'intrinsic_params': {
         'E':   {'a': 4*nS, 'b': 130*pA, 'DeltaT': 2*mV, 'C': 97*pF, 'gL': 4.2*nS, 'tauw': 200*ms, 'EL': -66*mV},
         'PV':  {'a': 0*nS, 'b': 0*pA,   'DeltaT': 0.5*mV, 'C': 38*pF, 'gL': 3.8*nS, 'tauw': 50*ms, 'EL': -68*mV},
