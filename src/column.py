@@ -59,7 +59,6 @@ class CorticalColumn:
         for (source_layer, target_layer), conns in self.config['inter_layer_connections'].items():
             if source_layer in self.layers and target_layer in self.layers:
                 for conn, prob in conns.items() :
-                    print(conn)
                     pre, post = conn.split('_')
                     excitatory = (pre == 'E')
                     connection_name = f"{source_layer}_{target_layer}_{conn}"

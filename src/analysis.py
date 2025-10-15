@@ -4,6 +4,7 @@ Analysis functions for neural data. to do  : check lfp method + spike analysis
 import numpy as np
 from scipy.signal import welch, spectrogram
 from brian2 import *
+from scipy.ndimage import gaussian_filter1d
 
 class LFPAnalysis:
     
@@ -89,118 +90,69 @@ class LFPAnalysis:
         peak_pow  = Sg[idx, np.arange(Sg.shape[1])]
         return peak_freq, peak_pow
 
-class SpikeAnalysis:
-
-    @staticmethod
-    def bin_population_rate(spike_monitor, n_neurons, bin_ms=1.0, t_stop_s=None):
-        t_s = np.array(spike_monitor.t)  
-        if t_stop_s is None:
-            t_stop_s = float(t_s.max()) if t_s.size else 0.0
-        bins = np.arange(0.0, t_stop_s + 1e-9, bin_ms/1000.0)
-        counts, _ = np.histogram(t_s, bins=bins)
-        rate = counts / (n_neurons * (bin_ms/1000.0))  
-        centers = 0.5*(bins[:-1] + bins[1:])
-        return centers, rate
-
-    @staticmethod
-    def power_spectrum_from_rate(rate, fs_hz, normalize_dc=True, eps=1e-12):
-        r_raw = np.asarray(rate)
-        n = len(r_raw)
-        if n == 0:
-            return np.array([]), np.array([])
-
-        psd_raw = (np.abs(np.fft.rfft(r_raw))**2) / n
-        dc = psd_raw[0]
-        r = r_raw - np.mean(r_raw)
-        psd = (np.abs(np.fft.rfft(r))**2) / n
-
-        if normalize_dc:
-            psd = psd / max(dc, eps)
-
-        freqs = np.fft.rfftfreq(n, d=1.0/fs_hz)
-        return freqs, psd
 
 
-    @staticmethod
-    def gamma_peak_and_power(freqs, psd, f_lo=30.0, f_hi=50.0):
-        if freqs.size == 0:
-            return np.nan, np.nan
-        band = (freqs >= f_lo) & (freqs <= f_hi)
-        if not np.any(band):
-            return np.nan, np.nan
-        idx = np.argmax(psd[band])
-        f_peak = freqs[band][idx]
-        p_peak = psd[band][idx]
-        return f_peak, p_peak
 
-    @staticmethod
-    def coherence_between_rates(rate_a, rate_b, fs_hz):
-        n = min(len(rate_a), len(rate_b))
-        if n == 0:
-            return np.array([]), np.array([])
-        a = rate_a[:n] - np.mean(rate_a[:n])
-        b = rate_b[:n] - np.mean(rate_b[:n])
-        A = np.fft.rfft(a)
-        B = np.fft.rfft(b)
-        Sxx = (A*np.conj(A)).real
-        Syy = (B*np.conj(B)).real
-        Sxy = A*np.conj(B)
-        coh = (np.abs(Sxy)**2) / (Sxx*Syy + 1e-18)
-        freqs = np.fft.rfftfreq(n, d=1.0/fs_hz)
-        return freqs, coh
+def build_psth_from_spikemon(
+    spike_mons, t_stim, t_pre=0.200, t_post=0.500, binW=0.002, smooth_sigma=0.010
+):
 
-    @staticmethod
-    def firing_rate_summary(spike_monitor, n_neurons, t_window_s=None, bin_ms=50.0):
-        t_s = np.array(spike_monitor.t)
-        if t_s.size == 0:
-            return 0.0
-        t_stop_s = float(t_s.max()) if t_window_s is None else t_window_s
-        centers, rate = SpikeAnalysis.bin_population_rate(spike_monitor, n_neurons, bin_ms=bin_ms, t_stop_s=t_stop_s)
-        return float(np.mean(rate))  
+    edges   = np.arange(-t_pre, t_post + 1e-12, binW)
+    centers = edges[:-1] + binW/2
 
-    @staticmethod
-    def gamma_metrics_from_spikes(spike_monitor, n_neurons, discard_ms=500.0, bin_ms=1.0, gamma_band=(30.0, 50.0)):
-        t_s = np.array(spike_monitor.t)
-        if t_s.size == 0:
-            return {'freqs': np.array([]), 'psd': np.array([]), 'f_peak': np.nan, 'gamma_power': np.nan,
-                    'centers': np.array([]), 'rate': np.array([])}
+    per_mon_meancounts = []
 
-        t_stop_s = float(t_s.max())
-        centers, rate = SpikeAnalysis.bin_population_rate(spike_monitor, n_neurons, bin_ms=bin_ms, t_stop_s=t_stop_s)
+    for mon in spike_mons:
+        t_rel = np.array(mon.t/second) - float(t_stim)
 
-        if discard_ms > 0:
-            keep = centers*1000.0 >= discard_ms
-            centers = centers[keep]
-            rate = rate[keep]
+        try:
+            n_units = int(mon.source.N)         
+        except Exception:
+            n_units = int(np.max(mon.i) + 1)   
 
-        if centers.size < 8:
-            return {'freqs': np.array([]), 'psd': np.array([]), 'f_peak': np.nan, 'gamma_power': np.nan,
-                    'centers': centers, 'rate': rate}
+        counts, _ = np.histogram(t_rel, bins=edges)
 
-        fs = 1.0 / np.diff(centers).mean()
-        freqs, psd = SpikeAnalysis.power_spectrum_from_rate(rate, fs, normalize_dc=True)
-        f_peak, g_pow = SpikeAnalysis.gamma_peak_and_power(freqs, psd, f_lo=gamma_band[0], f_hi=gamma_band[1])
+        meanc = counts.astype(float) / max(n_units, 1)
+        per_mon_meancounts.append(meanc)
 
-        return {
-            'freqs': freqs, 'psd': psd, 'f_peak': f_peak, 'gamma_power': g_pow,
-            'centers': centers, 'rate': rate
-        }
+    if len(per_mon_meancounts) == 0:
+        return centers, np.zeros_like(centers)
 
-    @staticmethod
-    def gamma_coherence_between_sites(spike_monitor_a, n_e_a, spike_monitor_b, n_e_b,
-                                      discard_ms=500.0, bin_ms=1.0, ref_peak_from=None):
-        out_a = SpikeAnalysis.gamma_metrics_from_spikes(spike_monitor_a, n_e_a, discard_ms=discard_ms, bin_ms=bin_ms)
-        out_b = SpikeAnalysis.gamma_metrics_from_spikes(spike_monitor_b, n_e_b, discard_ms=discard_ms, bin_ms=bin_ms)
-        if out_a['centers'].size == 0 or out_b['centers'].size == 0:
-            return {'freqs': np.array([]), 'coh': np.array([]), 'coh_at_peak': np.nan, 'f_ref': np.nan}
+    mean_counts_per_neuron = np.mean(np.vstack(per_mon_meancounts), axis=0)
 
-        fs = 1.0 / np.diff(out_a['centers']).mean()
-        n = min(len(out_a['rate']), len(out_b['rate']))
-        freqs, coh = SpikeAnalysis.coherence_between_rates(out_a['rate'][:n], out_b['rate'][:n], fs)
+    psth_hz = mean_counts_per_neuron / binW
 
-        f_ref = out_a['f_peak'] if (ref_peak_from is None or np.isnan(ref_peak_from)) else float(ref_peak_from)
-        if freqs.size == 0 or np.isnan(f_ref):
-            return {'freqs': freqs, 'coh': coh, 'coh_at_peak': np.nan, 'f_ref': f_ref}
+    sigma_bins = smooth_sigma / binW
+    psth_hz = gaussian_filter1d(psth_hz, sigma=sigma_bins, mode='nearest')
 
-        idx = np.argmin(np.abs(freqs - f_ref))
-        return {'freqs': freqs, 'coh': coh, 'coh_at_peak': float(coh[idx]), 'f_ref': f_ref}
+    return centers, psth_hz
+
+def baseline_subtract(lfp_time_rel, lfp_traces, t_pre=0.200):
+
+    t = np.asarray(lfp_time_rel)
+    pre_mask = (t >= -t_pre) & (t < 0)
+    X = np.asarray(lfp_traces) 
+    if X.ndim == 1:
+        X = X[None, :]
+    base = np.nanmean(X[:, pre_mask], axis=1, keepdims=True)
+    Xb = X - base
+    erp = np.nanmean(Xb, axis=0)
+    return t, erp
+
+def spectrogram_db_rel_baseline(x, fs, wlen_s=0.200, step_s=0.020):
+    from scipy.signal import spectrogram
+    nperseg = int(round(wlen_s * fs))
+    step = int(round(step_s * fs))
+    noverlap = max(0, nperseg - step)
+    f, T, P = spectrogram(x - np.mean(x), fs=fs, nperseg=nperseg, noverlap=noverlap, detrend='constant')
+
+    return f, T, P
+
+def to_db_relative(P, Trel):
+    pre_cols = np.where(Trel < 0)[0]
+    if pre_cols.size == 0:
+        base = np.mean(P, axis=1, keepdims=True)
+    else:
+        base = np.mean(P[:, pre_cols], axis=1, keepdims=True)
+    dB = 10.0 * np.log10((P + 1e-20) / (base + 1e-20))
+    return dB

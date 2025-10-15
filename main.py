@@ -5,7 +5,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 
-from config.config import CONFIG
+from config.config_test import CONFIG
 from src.column import CorticalColumn
 from src.visualization import NetworkVisualizer
 from src.analysis import LFPAnalysis
