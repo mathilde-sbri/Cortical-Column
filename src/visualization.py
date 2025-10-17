@@ -3,7 +3,7 @@ Visualization functions
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from .analysis import LFPAnalysis, SpikeAnalysis
+from .analysis import LFPAnalysis
 from brian2 import *
 
 class NetworkVisualizer:
