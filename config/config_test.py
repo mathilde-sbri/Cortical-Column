@@ -148,40 +148,40 @@ _INTER_LAYER_CONNECTIONS = {}
 _INTER_LAYER_CONDUCTANCES = {}
 _layers = ['L23', 'L4', 'L5', 'L6']
 
-# for src in _layers:
-#     for dst in _layers:
-#         if src == dst:
-#             continue  
-#         s = _layer_csv[src]
-#         t = _layer_csv[dst]
-#         _INTER_LAYER_CONNECTIONS[(src, dst)] = {
-#             'E_E'   : _prob(s['E_row'] , t['E_col']),
-#             'E_PV'  : _prob(s['E_row'] , t['PV_col']),
-#             'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
-#             'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
+for src in _layers:
+    for dst in _layers:
+        if src == dst:
+            continue  
+        s = _layer_csv[src]
+        t = _layer_csv[dst]
+        _INTER_LAYER_CONNECTIONS[(src, dst)] = {
+            'E_E'   : _prob(s['E_row'] , t['E_col']),
+            'E_PV'  : _prob(s['E_row'] , t['PV_col']),
+            'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
+            'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
 
-#             'PV_E'  : _prob(s['PV_row'], t['E_col']),
-#             'PV_PV' : _prob(s['PV_row'], t['PV_col']),
+            'PV_E'  : _prob(s['PV_row'], t['E_col']),
+            'PV_PV' : _prob(s['PV_row'], t['PV_col']),
 
-#             'SOM_E' : _prob(s['SOM_row'], t['E_col']),
-#             'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
+            'SOM_E' : _prob(s['SOM_row'], t['E_col']),
+            'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
 
-#             'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
-#         }
-#         _INTER_LAYER_CONDUCTANCES[(src, dst)] = {
-#             'E_E'   : _cond(s['E_row'] , t['E_col']),
-#             'E_PV'  : _cond(s['E_row'] , t['PV_col']),
-#             'E_SOM' : _cond(s['E_row'] , t['SOM_col']),
-#             'E_VIP' : _cond(s['E_row'] , t['VIP_col']),
+            'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
+        }
+        _INTER_LAYER_CONDUCTANCES[(src, dst)] = {
+            'E_E'   : _cond(s['E_row'] , t['E_col']),
+            'E_PV'  : _cond(s['E_row'] , t['PV_col']),
+            'E_SOM' : _cond(s['E_row'] , t['SOM_col']),
+            'E_VIP' : _cond(s['E_row'] , t['VIP_col']),
 
-#             'PV_E'  : _cond(s['PV_row'], t['E_col']),
-#             'PV_PV' : _cond(s['PV_row'], t['PV_col']),
+            'PV_E'  : _cond(s['PV_row'], t['E_col']),
+            'PV_PV' : _cond(s['PV_row'], t['PV_col']),
 
-#             'SOM_E' : _cond(s['SOM_row'], t['E_col']),
-#             'SOM_PV': _cond(s['SOM_row'], t['PV_col']),
+            'SOM_E' : _cond(s['SOM_row'], t['E_col']),
+            'SOM_PV': _cond(s['SOM_row'], t['PV_col']),
 
-#             'VIP_SOM': _cond(s['VIP_row'], t['SOM_col']),
-#         }
+            'VIP_SOM': _cond(s['VIP_row'], t['SOM_col']),
+        }
 
 
 
