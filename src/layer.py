@@ -148,19 +148,12 @@ class CorticalLayer:
 
     def _create_poisson_inputs(self):
         pinputs = self.layer_config.get('poisson_inputs', {})
-        for input_name, pconf in pinputs.items():
-           
-            if '_' in input_name:
-                target_pop = input_name.split('_')[0]  # 'E_stim' -> 'E'
-            else:
-                target_pop = input_name  # 'E' -> 'E'
-            
-            if target_pop not in self.neuron_groups:
+        for pop_name, pconf in pinputs.items():
+            if pop_name not in self.neuron_groups:
                 continue
-                
-            target_var = pconf.get('target', 'gE')
+            target_var = pconf.get('target', 'ge')
             if self.is_current:
-                target_var = {'gE': 'sE', 'gI': 'sI'}.get(target_var, target_var)
+                target_var = {'ge': 'sE', 'gi': 'sI'}.get(target_var, target_var)
 
             if 'N' in pconf and pconf['N'] is not None:
                 N = int(pconf['N'])
@@ -172,38 +165,10 @@ class CorticalLayer:
             w_cfg = pconf.get('weight', 'EXT')
             weight = self.config['synapses']['Q'][w_cfg] if isinstance(w_cfg, str) else w_cfg
             rate = pconf.get('rate', self.layer_config.get('input_rate', 0*Hz))
-            
-            onset_time = pconf.get('onset_time', None)
-            
-            if onset_time is not None:
-                dt = self.config['simulation']['DT']
-                total_time = self.config['simulation']['SIMULATION_TIME']
-                n_steps = int(total_time / dt) + 1
-                rates_array = np.zeros(n_steps) * Hz
-                onset_idx = int(onset_time / dt)
-                rates_array[onset_idx:] = rate
-                
-                timed_rates = TimedArray(rates_array, dt=dt)
-                poisson_group = PoissonGroup(N, rates='timed_rates(t)')
-                poisson_group.namespace['timed_rates'] = timed_rates
-            else:
-                poisson_group = PoissonGroup(N, rates=rate)
-            
-            excitatory = (target_var in ['gE', 'sE'])
-            if self.is_current:
-                val = float(weight / mV)
-                on_pre_eq = f"{target_var}_post += {val}*mV"
-            else:
-                val = float(weight / nS)
-                on_pre_eq = f"{target_var}_post += {val}*nS"
-            
-            syn = Synapses(poisson_group, self.neuron_groups[target_pop], on_pre=on_pre_eq)
-            syn.connect()  
-            
-            self.poisson_inputs[input_name] = {
-                'group': poisson_group,
-                'synapses': syn
-            }
+
+            self.poisson_inputs[pop_name] = PoissonInput(
+                self.neuron_groups[pop_name], target_var, N=N, rate=rate, weight=weight
+            )
 
     def _create_monitors(self):
         for pop_name, group in self.neuron_groups.items():
