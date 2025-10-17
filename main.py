@@ -5,7 +5,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 
-from config.config import CONFIG
+from config.config_test import CONFIG
 from src.column import CorticalColumn
 from src.visualization import NetworkVisualizer, plot_layer_psth, plot_layer_spectrograms
 from src.analysis import LFPAnalysis
@@ -50,8 +50,8 @@ def main():
     fig3 = NetworkVisualizer.plot_power_spectra(state_monitors, CONFIG['layers'])
     fig4 = NetworkVisualizer.plot_power_spectra_loglog(state_monitors, CONFIG['layers'])
     fig5 = NetworkVisualizer.plot_rate(rate_monitors, CONFIG['layers'])
-    fig6 = plot_layer_psth(spike_monitors, CONFIG['layers'])
-    fig7 = plot_layer_spectrograms(spike_monitors, CONFIG['layers'])
+    # fig6 = plot_layer_psth(spike_monitors, CONFIG['layers'])
+    # fig7 = plot_layer_spectrograms(spike_monitors, CONFIG['layers'])
 
 
     

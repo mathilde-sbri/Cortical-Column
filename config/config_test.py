@@ -1,7 +1,7 @@
 from brian2 import *
 import pandas as pd
 
-conn_df = pd.read_csv('connectivity_matrix.csv', index_col=0, skipinitialspace=True)
+conn_df = pd.read_csv('scaled_matrix_0_to_0.34-2.csv', index_col=0, skipinitialspace=True)
 conductances =  pd.read_csv('conductance.csv', index_col=0, skipinitialspace=True)
 p = 1
 q = 0.5
@@ -148,40 +148,40 @@ _INTER_LAYER_CONNECTIONS = {}
 _INTER_LAYER_CONDUCTANCES = {}
 _layers = ['L23', 'L4', 'L5', 'L6']
 
-# for src in _layers:
-#     for dst in _layers:
-#         if src == dst:
-#             continue  
-#         s = _layer_csv[src]
-#         t = _layer_csv[dst]
-#         _INTER_LAYER_CONNECTIONS[(src, dst)] = {
-#             'E_E'   : _prob(s['E_row'] , t['E_col']),
-#             'E_PV'  : _prob(s['E_row'] , t['PV_col']),
-#             'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
-#             'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
+for src in _layers:
+    for dst in _layers:
+        if src == dst:
+            continue  
+        s = _layer_csv[src]
+        t = _layer_csv[dst]
+        _INTER_LAYER_CONNECTIONS[(src, dst)] = {
+            'E_E'   : _prob(s['E_row'] , t['E_col']),
+            'E_PV'  : _prob(s['E_row'] , t['PV_col']),
+            'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
+            'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
 
-#             'PV_E'  : _prob(s['PV_row'], t['E_col']),
-#             'PV_PV' : _prob(s['PV_row'], t['PV_col']),
+            'PV_E'  : _prob(s['PV_row'], t['E_col']),
+            'PV_PV' : _prob(s['PV_row'], t['PV_col']),
 
-#             'SOM_E' : _prob(s['SOM_row'], t['E_col']),
-#             'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
+            'SOM_E' : _prob(s['SOM_row'], t['E_col']),
+            'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
 
-#             'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
-#         }
-#         _INTER_LAYER_CONDUCTANCES[(src, dst)] = {
-#             'E_E'   : _cond(s['E_row'] , t['E_col']),
-#             'E_PV'  : _cond(s['E_row'] , t['PV_col']),
-#             'E_SOM' : _cond(s['E_row'] , t['SOM_col']),
-#             'E_VIP' : _cond(s['E_row'] , t['VIP_col']),
+            'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
+        }
+        _INTER_LAYER_CONDUCTANCES[(src, dst)] = {
+            'E_E'   : _cond(s['E_row'] , t['E_col']),
+            'E_PV'  : _cond(s['E_row'] , t['PV_col']),
+            'E_SOM' : _cond(s['E_row'] , t['SOM_col']),
+            'E_VIP' : _cond(s['E_row'] , t['VIP_col']),
 
-#             'PV_E'  : _cond(s['PV_row'], t['E_col']),
-#             'PV_PV' : _cond(s['PV_row'], t['PV_col']),
+            'PV_E'  : _cond(s['PV_row'], t['E_col']),
+            'PV_PV' : _cond(s['PV_row'], t['PV_col']),
 
-#             'SOM_E' : _cond(s['SOM_row'], t['E_col']),
-#             'SOM_PV': _cond(s['SOM_row'], t['PV_col']),
+            'SOM_E' : _cond(s['SOM_row'], t['E_col']),
+            'SOM_PV': _cond(s['SOM_row'], t['PV_col']),
 
-#             'VIP_SOM': _cond(s['VIP_row'], t['SOM_col']),
-#         }
+            'VIP_SOM': _cond(s['VIP_row'], t['SOM_col']),
+        }
 
 
 
@@ -197,7 +197,7 @@ t_ref = 5*ms
 
 CONFIG = {
     'simulation': {
-        'SIMULATION_TIME': 1000*ms,
+        'SIMULATION_TIME': 4000*ms,
         'DT': 0.1*ms,
         'RANDOM_SEED': 58879,
     },

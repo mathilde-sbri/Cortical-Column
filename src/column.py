@@ -44,7 +44,7 @@ class CorticalColumn:
                     layer_name,
                     self.config
                 )
-
+    
     def _on_pre(self, weight_key, conductance, excitatory=False):
     
         pre, post = weight_key.split('_')
@@ -67,7 +67,7 @@ class CorticalColumn:
                     if is_current:
                         on_pre = f"sE_post += {float(W/mV)}*mV"
                     else:
-                        on_pre = self._on_pre(conn, conductance, excitatory=excitatory)
+                        on_pre = self._on_pre(conn, conductance , excitatory=excitatory)
                     group1, group2 = conn.split("_")
                     syn = Synapses(self.layers[source_layer].get_neuron_group(group1),
                                 self.layers[target_layer].get_neuron_group(group2),
