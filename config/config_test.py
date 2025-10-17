@@ -1,29 +1,30 @@
 from brian2 import *
 import pandas as pd
 
-conn_df = pd.read_csv('scaled_matrix_0_to_0.34.csv', index_col=0, skipinitialspace=True)
-
+conn_df = pd.read_csv('connectivity_matrix.csv', index_col=0, skipinitialspace=True)
+conductances =  pd.read_csv('conductance.csv', index_col=0, skipinitialspace=True)
 p = 1
+q = 0.5
 
 _LAYER_CONFIGS = {
     'L1': {
         'connection_prob': {
-            'E_E': p,
-            'E_PV': p,
-            'E_SOM': p,
-            'E_VIP': p,
-            'PV_E': p,
-            'PV_PV': p,
-            'SOM_E': p,
-            'SOM_PV': p,
-            'VIP_SOM': p,
+            'E_E': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'E_PV': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'E_SOM': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'E_VIP': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'PV_E': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'PV_PV': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'SOM_E': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'SOM_PV': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
+            'VIP_SOM': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
         },
         'input_rate': 5*Hz,
         'neuron_counts': {
-            'E': 80,
-            'PV': 10,
-            'SOM': 10,
-            'VIP': 390
+            'E': 8,
+            'PV': 1,
+            'SOM': 1,
+            'VIP': 39
         },
         'poisson_inputs': {
             'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
@@ -73,6 +74,8 @@ _LAYER_CONFIGS = {
         'poisson_inputs': {
             'E':  {'target': 'gE', 'rate': 10*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
             'PV': {'target': 'gE', 'rate': 10*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E_stim': {'target': 'gE', 'rate': 10*Hz, 'weight': 'EXT', 
+                   'N_fraction_of_E': 0.017, 'onset_time': 0.5*second},
         }
     },
 
@@ -124,6 +127,7 @@ _LAYER_CONFIGS = {
 }
 
 _layer_csv = {
+    
     'L23': {'E_row': 'E2/3',   'PV_row': 'i2/3Pva',  'SOM_row': 'i2/3Sst',  'VIP_row': 'i2/3Htr',
             'E_col': 'E2/3',   'PV_col': 'i2/3 Pvalb','SOM_col': 'i2/3 Sst','VIP_col': 'i2/3 Htr3a'},
     'L4' : {'E_row': 'E4',     'PV_row': 'i4Pvalb',  'SOM_row': 'i4Sst',    'VIP_row': 'i4Htr3a',
@@ -137,29 +141,47 @@ _layer_csv = {
 def _prob(src_row, tgt_col):
     return p * (conn_df.loc[src_row].to_dict()[tgt_col])
 
+def _cond(src_row, tgt_col):
+    return q*conductances.loc[src_row].to_dict()[tgt_col]
+
 _INTER_LAYER_CONNECTIONS = {}
+_INTER_LAYER_CONDUCTANCES = {}
 _layers = ['L23', 'L4', 'L5', 'L6']
 
-for src in _layers:
-    for dst in _layers:
-        if src == dst:
-            continue  
-        s = _layer_csv[src]
-        t = _layer_csv[dst]
-        _INTER_LAYER_CONNECTIONS[(src, dst)] = {
-            'E_E'   : _prob(s['E_row'] , t['E_col']),
-            'E_PV'  : _prob(s['E_row'] , t['PV_col']),
-            'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
-            'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
+# for src in _layers:
+#     for dst in _layers:
+#         if src == dst:
+#             continue  
+#         s = _layer_csv[src]
+#         t = _layer_csv[dst]
+#         _INTER_LAYER_CONNECTIONS[(src, dst)] = {
+#             'E_E'   : _prob(s['E_row'] , t['E_col']),
+#             'E_PV'  : _prob(s['E_row'] , t['PV_col']),
+#             'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
+#             'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
 
-            'PV_E'  : _prob(s['PV_row'], t['E_col']),
-            'PV_PV' : _prob(s['PV_row'], t['PV_col']),
+#             'PV_E'  : _prob(s['PV_row'], t['E_col']),
+#             'PV_PV' : _prob(s['PV_row'], t['PV_col']),
 
-            'SOM_E' : _prob(s['SOM_row'], t['E_col']),
-            'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
+#             'SOM_E' : _prob(s['SOM_row'], t['E_col']),
+#             'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
 
-            'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
-        }
+#             'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
+#         }
+#         _INTER_LAYER_CONDUCTANCES[(src, dst)] = {
+#             'E_E'   : _cond(s['E_row'] , t['E_col']),
+#             'E_PV'  : _cond(s['E_row'] , t['PV_col']),
+#             'E_SOM' : _cond(s['E_row'] , t['SOM_col']),
+#             'E_VIP' : _cond(s['E_row'] , t['VIP_col']),
+
+#             'PV_E'  : _cond(s['PV_row'], t['E_col']),
+#             'PV_PV' : _cond(s['PV_row'], t['PV_col']),
+
+#             'SOM_E' : _cond(s['SOM_row'], t['E_col']),
+#             'SOM_PV': _cond(s['SOM_row'], t['PV_col']),
+
+#             'VIP_SOM': _cond(s['VIP_row'], t['SOM_col']),
+#         }
 
 
 
@@ -325,15 +347,17 @@ CONFIG = {
             'PV_E': 6*nS,
             'SOM_E': 5*nS,
             'SOM_PV': 5*nS,
-            'E_E': 1.75*nS,
+            'E_E': 1.25*nS,
             'E_PV': 3.75*nS,
             'E_SOM': 2.5*nS,
             'E_VIP': 1.5*nS,
             'VIP_SOM': 5.0*nS,
             'EXT': 1.25*nS,
         },
-       
     },
+       
+
     'layers': _LAYER_CONFIGS,
     'inter_layer_connections': _INTER_LAYER_CONNECTIONS,
+    'inter_layer_conductances': _INTER_LAYER_CONDUCTANCES,
 }

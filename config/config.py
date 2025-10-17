@@ -124,11 +124,13 @@ _LAYER_CONFIGS = {
 }
 
 _INTER_LAYER_CONNECTIONS = {
-    ('L4', 'L23'): {'E_E': 0.01, 'E_PV': 0.01},
-    ('L23', 'L5'): {'E_E': 0.01, 'E_PV': 0.01},
-    ('L5', 'L6'): {'E_E': 0.02, 'PV_E': 0.01}, 
-    ('L6', 'L4'): {'E_E': 0.01, 'PV_E': 0.01},  
+    # ('L4', 'L23'): {'E_E': 0.01, 'E_PV': 0.01},
+    # ('L23', 'L5'): {'E_E': 0.01, 'E_PV': 0.01},
+    # ('L5', 'L6'): {'E_E': 0.02, 'PV_E': 0.01}, 
+    # ('L6', 'L4'): {'E_E': 0.01, 'PV_E': 0.01},  
 }
+
+_INTER_LAYER_CONDUCTANCES = {}
 
 tau_e_AMPA = 5*ms
 tau_i_PV   = 6*ms
@@ -302,4 +304,5 @@ CONFIG = {
     },
     'layers': _LAYER_CONFIGS,
     'inter_layer_connections': _INTER_LAYER_CONNECTIONS,
+    'inter_layer_conductances': _INTER_LAYER_CONDUCTANCES,
 }

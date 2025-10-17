@@ -44,6 +44,18 @@ class CorticalLayer:
                 refractory=self.config['neurons']['T_REF'],
                 namespace=common_namespace
             )
+            # self.neuron_groups[pop_name].EL    = self.config['intrinsic_params'][pop_name]['EL']    + 1.0*mV*randn(n)      # ±1 mV
+            # self.neuron_groups[pop_name].C     = self.config['intrinsic_params'][pop_name]['C']     * (1 + 0.10*randn(n)) 
+            # self.neuron_groups[pop_name].gL    = self.config['intrinsic_params'][pop_name]['gL']    * (1 + 0.10*randn(n))
+            # self.neuron_groups[pop_name].DeltaT= self.config['intrinsic_params'][pop_name]['DeltaT']* (1 + 0.10*randn(n))
+            # self.neuron_groups[pop_name].tauw  = self.config['intrinsic_params'][pop_name]['tauw']  * (1 + 0.10*randn(n))
+
+            # self.neuron_groups[pop_name].gE = np.random.exponential(0.5) * nS
+            # self.neuron_groups[pop_name].gPV = np.random.exponential(0.3) * nS
+            # self.neuron_groups[pop_name].gSOM = np.random.exponential(0.3) * nS
+            # self.neuron_groups[pop_name].gVIP = np.random.exponential(0.2) * nS
+            # self.neuron_groups[pop_name].I = (200*pA) + (50*pA) * randn(n) 
+            # self.neuron_groups[pop_name].v = 'V_reset + rand() * (VT - V_reset)'
 
     def _set_neuron_parameters(self):
         def set_if_exists(group, attr, value):
@@ -136,9 +148,16 @@ class CorticalLayer:
 
     def _create_poisson_inputs(self):
         pinputs = self.layer_config.get('poisson_inputs', {})
-        for pop_name, pconf in pinputs.items():
-            if pop_name not in self.neuron_groups:
+        for input_name, pconf in pinputs.items():
+           
+            if '_' in input_name:
+                target_pop = input_name.split('_')[0]  # 'E_stim' -> 'E'
+            else:
+                target_pop = input_name  # 'E' -> 'E'
+            
+            if target_pop not in self.neuron_groups:
                 continue
+                
             target_var = pconf.get('target', 'gE')
             if self.is_current:
                 target_var = {'gE': 'sE', 'gI': 'sI'}.get(target_var, target_var)
@@ -153,8 +172,22 @@ class CorticalLayer:
             w_cfg = pconf.get('weight', 'EXT')
             weight = self.config['synapses']['Q'][w_cfg] if isinstance(w_cfg, str) else w_cfg
             rate = pconf.get('rate', self.layer_config.get('input_rate', 0*Hz))
-
-            poisson_group = PoissonGroup(N, rates=rate)
+            
+            onset_time = pconf.get('onset_time', None)
+            
+            if onset_time is not None:
+                dt = self.config['simulation']['DT']
+                total_time = self.config['simulation']['SIMULATION_TIME']
+                n_steps = int(total_time / dt) + 1
+                rates_array = np.zeros(n_steps) * Hz
+                onset_idx = int(onset_time / dt)
+                rates_array[onset_idx:] = rate
+                
+                timed_rates = TimedArray(rates_array, dt=dt)
+                poisson_group = PoissonGroup(N, rates='timed_rates(t)')
+                poisson_group.namespace['timed_rates'] = timed_rates
+            else:
+                poisson_group = PoissonGroup(N, rates=rate)
             
             excitatory = (target_var in ['gE', 'sE'])
             if self.is_current:
@@ -164,10 +197,10 @@ class CorticalLayer:
                 val = float(weight / nS)
                 on_pre_eq = f"{target_var}_post += {val}*nS"
             
-            syn = Synapses(poisson_group, self.neuron_groups[pop_name], on_pre=on_pre_eq)
+            syn = Synapses(poisson_group, self.neuron_groups[target_pop], on_pre=on_pre_eq)
             syn.connect()  
             
-            self.poisson_inputs[pop_name] = {
+            self.poisson_inputs[input_name] = {
                 'group': poisson_group,
                 'synapses': syn
             }

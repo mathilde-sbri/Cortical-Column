@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import *
 from brian2 import *
+from scipy import signal
+from scipy.ndimage import gaussian_filter1d
 try:
-    from scipy.signal import savgol_filter
+    from scipy.signal import savgol_filter, butter, filtfilt
     _HAS_SAVGOL = True
 except Exception:
     _HAS_SAVGOL = False
@@ -55,7 +57,7 @@ class NetworkVisualizer:
                           monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
                           color='gold', s=0.5, alpha=0.8, label="VIP")
             
-            ax.set_xlim(0, 4)
+            ax.set_xlim(0, 1)
             ax.set_ylabel('Neuron index')
             ax.set_title(f'{layer_name} Spike Raster Plot')
             ax.legend()
@@ -90,7 +92,7 @@ class NetworkVisualizer:
                 ax.set_xlabel('Time (ms)')
                 ax.set_ylabel('LFP (norm)')
                 ax.set_title(f'{layer_name} Local Field Potential')
-                ax.set_xlim(0, 4000)
+                ax.set_xlim(0, 1000)
                 ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
@@ -165,9 +167,9 @@ class NetworkVisualizer:
 
             try:
                 if x_in_seconds:
-                    ax.set_xlim(0, 4)
+                    ax.set_xlim(0, 1)
                 else:
-                    ax.set_xlim(0, 4000)
+                    ax.set_xlim(0, 1000)
             except Exception:
                 pass
 
@@ -334,100 +336,322 @@ class NetworkVisualizer:
             figs.append(fig)
         return figs
 
-        
-class MatlabMatchPlots:
-    @staticmethod
-    def plot_stim_locked_lfp_and_spikes(all_state_monitors, all_spike_monitors,
-                                        t_stim, t_pre=0.200, t_post=0.500,
-                                        binW=0.002, smooth_sigma=0.010):
 
 
-        lfp_traces = []
-        for mon in all_state_monitors:
-            t_ms, lfp = LFPAnalysis.process_lfp(mon)  
-            t_s = t_ms / 1000.0
-            t_rel = t_s - float(t_stim)            
-            mask = (t_rel >= -t_pre) & (t_rel <= t_post)
-            if np.any(mask):
-                lfp_traces.append(np.interp(
-                    np.linspace(-t_pre, t_post, np.sum(mask)),
-                    t_rel[mask],
-                    lfp[mask]
-                ))
-        if len(lfp_traces) == 0:
-            raise RuntimeError("No LFP traces found in analysis window.")
-        t_common = np.linspace(-t_pre, t_post, len(lfp_traces[0]))
-        tERP, erp = baseline_subtract(t_common, np.vstack(lfp_traces), t_pre=t_pre)
 
-        pooled_spike_mons = []
-        if isinstance(all_spike_monitors, dict):
-            for mon in all_spike_monitors.values():
-                pooled_spike_mons.append(mon)
-        elif isinstance(all_spike_monitors, list):
-            pooled_spike_mons = list(all_spike_monitors)
+def compute_psth(spike_monitor, bin_width=2*ms, sigma=10*ms, simulation_time=1000*ms):
+    """
+    Compute PSTH (like MATLAB buildPSTH + smoothing)
+    
+    Parameters:
+    -----------
+    spike_monitor : Brian2 SpikeMonitor
+    bin_width : time bin width (MATLAB: 2ms)
+    sigma : Gaussian smoothing width (MATLAB: 10ms)
+    simulation_time : total simulation duration
+    
+    Returns:
+    --------
+    t_centers : time bin centers (seconds)
+    psth : firing rate in Hz
+    """
+    # Convert to base units
+    bw = float(bin_width / ms) / 1000  # seconds
+    sim_time = float(simulation_time / second)
+    
+    # Create time bins
+    t_edges = np.arange(0, sim_time + bw, bw)
+    t_centers = t_edges[:-1] + bw/2
+    
+    # Get spike times
+    spike_times = spike_monitor.t / second
+    
+    # Histogram spike counts
+    counts, _ = np.histogram(spike_times, bins=t_edges)
+    
+    # Convert to firing rate (Hz)
+    # counts/bin → counts/second, then divide by number of neurons
+    n_neurons = spike_monitor.source.N
+    psth = counts / (bw * n_neurons)
+    
+    # Smooth with Gaussian (MATLAB uses conv with gaussian kernel)
+    sigma_bins = float(sigma / ms) / 1000 / bw  # sigma in bins
+    psth_smooth = gaussian_filter1d(psth, sigma=sigma_bins, mode='nearest')
+    
+    return t_centers, psth_smooth
+
+
+def compute_population_lfp_proxy(
+    spike_monitors_dict,
+    pops=('E', 'PV', 'SOM', 'VIP'),
+    weights_dict=None,
+    dt_ms=0.1,
+    t_start_ms=None,
+    t_stop_ms=None,
+    normalize_by_neurons=False,
+    lowpass_cutoff_hz=300,
+    butter_order=4,
+):
+
+
+    if weights_dict is None:
+        weights_dict = {'E': 0.3, 'PV': 1.0, 'SOM': 1.0, 'VIP': 0.8}
+
+    def _get_mon(d, pop):
+        if f'{pop}_spikes' in d:
+            return d[f'{pop}_spikes']
+        return d.get(pop, None)
+
+    def _extract_times_ms_and_n(mon):
+        if mon is None:
+            return np.array([], dtype=float), 0
+        try:
+            sts = mon.spike_trains()
+            times = np.concatenate([np.asarray(t) for t in sts.values()]) if len(sts) else np.array([])
+            try:
+                times_ms = np.array([float(tt/second)*1000.0 for tt in times])
+            except Exception:
+                times_ms = np.asarray(times, dtype=float) * 1000.0
+            return times_ms, len(sts)
+        except Exception:
+            pass
+
+        try:
+            times_ms = (np.asarray(mon.t) / second) * 1000.0
+        except Exception:
+            times_ms = np.asarray(mon.t, dtype=float) * 1000.0
+
+        n_cells = getattr(mon, 'N', 0)
+        return times_ms, int(n_cells) if n_cells is not None else 0
+
+    all_times = []
+    for pop in pops:
+        mon = _get_mon(spike_monitors_dict, pop)
+        times_ms, _ = _extract_times_ms_and_n(mon)
+        if times_ms.size:
+            all_times.append(times_ms)
+
+    if not all_times and (t_start_ms is None or t_stop_ms is None):
+        raise ValueError("No spikes found and no explicit t_start_ms/t_stop_ms provided.")
+
+    if t_start_ms is None:
+        t_start_ms = min(t.min() for t in all_times) if all_times else 0.0
+    if t_stop_ms is None:
+        t_stop_ms = max(t.max() for t in all_times) if all_times else (t_start_ms + 1000.0)
+
+    edges = np.arange(t_start_ms, t_stop_ms + dt_ms, dt_ms)
+    centers_ms = 0.5 * (edges[:-1] + edges[1:])
+    lfp_proxy = np.zeros_like(centers_ms, dtype=float)
+
+    for pop in pops:
+        mon = _get_mon(spike_monitors_dict, pop)
+        times_ms, n_cells = _extract_times_ms_and_n(mon)
+        if times_ms.size == 0:
+            continue
+        counts, _ = np.histogram(times_ms, bins=edges)
+        if normalize_by_neurons and n_cells > 0:
+            counts = counts / float(n_cells)
+        weight = weights_dict.get(pop, 1.0)
+        lfp_proxy += weight * counts
+
+    fs = 1000.0 / dt_ms  # Hz
+    nyq = fs / 2.0
+    cutoff = min(lowpass_cutoff_hz, nyq * 0.99) 
+    b, a = butter(butter_order, cutoff / nyq, btype='low')
+    lfp_filtered = filtfilt(b, a, lfp_proxy)
+
+    return centers_ms / 1000.0, lfp_filtered
+
+
+
+def compute_spectrogram(lfp_signal, fs=10000, window_ms=200, overlap_ms=180):
+    """
+    Compute spectrogram (matching MATLAB's spectrogram function)
+    
+    Parameters:
+    -----------
+    lfp_signal : 1D array of LFP proxy
+    fs : sampling frequency (Hz)
+    window_ms : window length in ms (MATLAB: 200ms)
+    overlap_ms : overlap in ms (MATLAB: 180ms)
+    
+    Returns:
+    --------
+    f : frequency array
+    t : time array
+    Sxx_dB : spectrogram in dB relative to baseline
+    """
+    # Convert to samples
+    nperseg = int(window_ms * fs / 1000)
+    noverlap = int(overlap_ms * fs / 1000)
+    nfft = 2**int(np.ceil(np.log2(nperseg * 2.5)))
+    
+    # Compute spectrogram
+    f, t, Sxx = signal.spectrogram(lfp_signal, fs=fs, 
+                                   window='hann',
+                                   nperseg=nperseg,
+                                   noverlap=noverlap,
+                                   nfft=nfft,
+                                   scaling='density')
+    
+    # Baseline normalization (MATLAB: first 200ms or t<0 if stim-locked)
+    # Here assume first 200ms is baseline
+    baseline_idx = t < 0.2
+    if np.sum(baseline_idx) > 0:
+        baseline_power = np.mean(Sxx[:, baseline_idx], axis=1, keepdims=True)
+    else:
+        baseline_power = np.mean(Sxx, axis=1, keepdims=True)
+    
+    # Convert to dB
+    Sxx_dB = 10 * np.log10(Sxx / (baseline_power + 1e-10))
+    
+    return f, t, Sxx_dB
+
+
+# ============================================
+# EXAMPLE USAGE: Create plots matching MATLAB
+# ============================================
+
+def plot_layer_psth(
+    spike_monitors,
+    layer_configs,
+    pops_to_include=('E','PV','SOM','VIP'),
+    bin_width=2*ms,
+    sigma=10*ms,
+    mode='mean_per_neuron',  # 'mean_per_neuron' or 'population_rate'
+    stim_onset=0.5           # seconds
+):
+
+
+    def _all_spike_times_seconds(mon):
+        sts = mon.spike_trains()
+        times = np.concatenate([np.asarray(t) for t in sts.values()])
+        try:
+            times = np.array([float(t) for t in times]) 
+        except Exception:
+            times = np.asarray(times, dtype=float)
+        return times, len(sts)
+
+
+    t_min, t_max = None, None
+    for layer_name, monitors in spike_monitors.items():
+        for pop in pops_to_include:
+            key = f'{pop}_spikes'
+            if key in monitors:
+                ts, _ = _all_spike_times_seconds(monitors[key])
+                if ts.size:
+                    mn, mx = ts.min(), ts.max()
+                    t_min = mn if t_min is None else min(t_min, mn)
+                    t_max = mx if t_max is None else max(t_max, mx)
+    if t_min is None or t_max is None:
+        raise ValueError("No spikes found in the provided monitors.")
+
+    bin_w_s = float(bin_width/second) 
+    edges = np.arange(t_min, t_max + bin_w_s, bin_w_s)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+
+    fig, axes = plt.subplots(5, 1, figsize=(12, 14), sharex=True)
+    layers = ['L1', 'L23', 'L4', 'L5', 'L6']
+
+    for i, layer_name in enumerate(layers):
+        ax = axes[i]
+        monitors = spike_monitors.get(layer_name, {})
+        total_counts = np.zeros(len(edges)-1, dtype=float)
+        total_neurons = 0
+
+        any_data = False
+        for pop in pops_to_include:
+            key = f'{pop}_spikes'
+            if key not in monitors:
+                continue
+            ts, n_cells = _all_spike_times_seconds(monitors[key])
+            if ts.size:
+                any_data = True
+                counts, _ = np.histogram(ts, bins=edges)
+                total_counts += counts
+                total_neurons += n_cells
+
+        if not any_data:
+            ax.text(0.5, 0.5, f'{layer_name}: no spikes', ha='center', va='center', transform=ax.transAxes)
+            ax.set_axis_off()
+            continue
+
+        if mode == 'mean_per_neuron':
+            denom = (total_neurons * bin_w_s) if total_neurons > 0 else bin_w_s
+        elif mode == 'population_rate':
+            denom = bin_w_s
         else:
-            pooled_spike_mons = [all_spike_monitors]
-        tCenters, psth_hz = build_psth_from_spikemon(
-            pooled_spike_mons, t_stim, t_pre=t_pre, t_post=t_post, binW=binW, smooth_sigma=smooth_sigma
-        )
+            raise ValueError("mode must be 'mean_per_neuron' or 'population_rate'")
+        rate = total_counts / denom
 
-        fig, axes = plt.subplots(2, 2, figsize=(10, 7))
-        ax = axes[0,0]
-        ax.plot(tERP, erp, lw=1.5)
-        ax.axvline(0, color='k', ls=':')
-        ax.axhline(0, color='k', ls=':')
-        ax.set_title('LFP ERP (stim-locked)')
-        ax.set_xlabel('Time from stimulus (s)')
-        ax.set_ylabel('LFP (baseline-sub)')
 
-        ax = axes[1,0]
-        ax.plot(tCenters, psth_hz, lw=1.5)
-        ax.axvline(0, color='k', ls=':')
-        ax.set_title(f'Spike PSTH (bin={binW*1e3:.0f} ms, σ={smooth_sigma*1e3:.0f} ms)')
-        ax.set_xlabel('Time from stimulus (s)')
-        ax.set_ylabel('Firing rate (Hz)')
+        config = layer_configs.get(layer_name, layer_name)
+        ax.plot(centers, rate, linewidth=1.8)
+        ax.axvline(stim_onset, linestyle=':', alpha=0.5)
+        ylabel = 'Rate (Hz per neuron)' if mode == 'mean_per_neuron' else 'Population rate (Hz)'
+        ax.set_ylabel(ylabel)
+        ax.set_title(f'{config} — {layer_name}')
 
-        axes[0,1].axis('off')
-        axes[1,1].axis('off')
+        ax.grid(True, alpha=0.3)
 
-        fig.suptitle('Stimulus-locked responses (pooled, MATLAB-like)')
-        fig.tight_layout()
-        return fig
+    axes[-1].set_xlabel('Time (s)')
+    plt.tight_layout()
+    plt.suptitle('Layer PSTHs', y=1.02)
+    return fig
 
-    @staticmethod
-    def plot_spectrogram_db(state_monitors, t_stim, t_pre=0.200, t_post=0.500,
-                             wlen=0.200, step=0.020, fmax=150):
-        import matplotlib.pyplot as plt
-        lfp_traces = []
-        for mon in state_monitors:
-            t_ms, lfp = LFPAnalysis.process_lfp(mon)
-            t_s = t_ms / 1000.0
-            t_rel = t_s - float(t_stim)
-            mask = (t_rel >= -t_pre) & (t_rel <= t_post)
-            if np.any(mask):
-                lfp_traces.append(np.interp(
-                    np.linspace(-t_pre, t_post, np.sum(mask)),
-                    t_rel[mask],
-                    lfp[mask]
-                ))
-        X = np.vstack(lfp_traces)
-        x_avg = X.mean(axis=0)
-        fs = (len(x_avg) - 1) / (t_post + t_pre)
 
-        from scipy.signal import spectrogram
-        nperseg = int(round(wlen * fs))
-        nover = int(round((wlen - step) * fs))
-        f, T, P = spectrogram(x_avg - np.mean(x_avg), fs=fs, nperseg=nperseg, noverlap=nover, detrend='constant')
-        Trel = T - t_pre
-        dB = to_db_relative(P, Trel)
-        maskf = f <= fmax
+def plot_layer_spectrograms(
+    spike_monitors,
+    layer_configs,
+    pops_to_include=('E', 'PV', 'SOM', 'VIP'),
+    fmax=150,
+    vmin=-10,
+    vmax=10,
+    stim_onset=0.5
+):
+    import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(1,1, figsize=(8,5))
-        im = ax.imshow(dB[maskf,:], origin='lower', aspect='auto',
-                       extent=[Trel[0], Trel[-1], f[maskf][0], f[maskf][-1]])
-        ax.axvline(0, color='k', ls=':', lw=1)
-        ax.set_xlabel('Time from stimulus (s)')
-        ax.set_ylabel('Frequency (Hz)')
-        ax.set_title('LFP spectrogram (dB vs pre-stim)')
-        cb = plt.colorbar(im, ax=ax); cb.set_label('Power change (dB)')
-        return fig
+    fig, axes = plt.subplots(5, 1, figsize=(12, 15), sharex=True)
+    layers = ['L1', 'L23', 'L4', 'L5', 'L6']
+
+    for i, layer in enumerate(layers):
+        ax = axes[i]
+
+        if layer not in spike_monitors:
+            ax.text(0.5, 0.5, f'{layer}: no data', ha='center', va='center', transform=ax.transAxes)
+            ax.set_axis_off()
+            continue
+
+        try:
+            t_lfp, lfp = compute_population_lfp_proxy(
+                spike_monitors[layer],
+                pops=pops_to_include
+            )
+        except Exception as e:
+            ax.text(0.5, 0.5, f'{layer}: error computing LFP\n{e}', ha='center', va='center', transform=ax.transAxes)
+            ax.set_axis_off()
+            continue
+
+        fs = 1 / (t_lfp[1] - t_lfp[0]) 
+        f, t_spec, Sxx_dB = compute_spectrogram(lfp, fs=fs)
+
+        im = ax.pcolormesh(t_spec, f, Sxx_dB, shading='auto', cmap='RdBu_r',
+                           vmin=vmin, vmax=vmax)
+        ax.axvline(stim_onset, color='k', linestyle=':', linewidth=1)
+        ax.set_ylabel('Freq (Hz)')
+        ax.set_ylim([0, fmax])
+
+        config = layer_configs.get(layer, layer)
+        ax.set_title(f'{config} — {layer} LFP Spectrogram')
+
+        plt.colorbar(im, ax=ax, label='Power change (dB)')
+
+        if i == len(layers) - 1:
+            ax.set_xlabel('Time (s)')
+
+    plt.tight_layout()
+    plt.suptitle('Layer-wise LFP Spectrograms', y=1.02)
+    return fig
+
+
+        
