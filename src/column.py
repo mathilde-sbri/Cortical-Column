@@ -62,7 +62,7 @@ class CorticalColumn:
                     excitatory = (pre == 'E')
                     connection_name = f"{source_layer}_{target_layer}_{conn}"
                     is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
-                    W = self.config['synapses']['Q'][conn]
+                    W = self.config['inter_layer_conductances'][(source_layer, target_layer)][conn]
                     conductance = self.config['inter_layer_conductances'][source_layer, target_layer][conn]
                     if is_current:
                         on_pre = f"sE_post += {float(W/mV)}*mV"

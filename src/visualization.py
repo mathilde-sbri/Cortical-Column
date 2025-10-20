@@ -37,7 +37,7 @@ class NetworkVisualizer:
                           monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
                           color='gold', s=0.5, alpha=0.8, label="VIP")
             
-            ax.set_xlim(0, 4)
+            ax.set_xlim(0.8, 1.6)
             ax.set_ylabel('Neuron index')
             ax.set_title(f'{layer_name} Spike Raster Plot')
             ax.legend()
@@ -72,7 +72,7 @@ class NetworkVisualizer:
                 ax.set_xlabel('Time (ms)')
                 ax.set_ylabel('LFP (norm)')
                 ax.set_title(f'{layer_name} Local Field Potential')
-                ax.set_xlim(0, 4000)
+                ax.set_xlim(800, 1600)
                 ax.grid(True, alpha=0.3)
         
         plt.tight_layout()
@@ -97,7 +97,6 @@ class NetworkVisualizer:
                        label=layer_name, linewidth=2.5)
                 ax.set_ylabel('Power', fontsize=18)
                 ax.grid(True)
-                
                 peak_idx = np.argmax(psd[:50])
                 ax.axvline(freq[peak_idx], color='r', linestyle='--')
                 ax.legend(fontsize=20, loc='upper center')
@@ -153,17 +152,6 @@ class NetworkVisualizer:
         if n_layers == 1:
             axes = [axes]
 
-        def _to_seconds(t):
-            try:
-                return (t / second)
-            except Exception:
-                return t
-
-        def _to_hz(r):
-            try:
-                return (r / Hz)
-            except Exception:
-                return r
 
         for ax, layer_name in zip(axes, layer_names):
             layer_rates = rate_monitors.get(layer_name, {})
@@ -172,14 +160,18 @@ class NetworkVisualizer:
             for pop_key in sorted(layer_rates.keys()):
                 mon = layer_rates[pop_key]
                 try:
-                    t = _to_seconds(mon.t)
-                    r = _to_hz(mon.rate)
+
+                    t = mon.t / ms
+                    r = mon.smooth_rate(window='flat', width=10.1*ms) / Hz
+
                     ax.plot(t, r, label=pop_key)
+                    ax.set_xlim(800, 1600)
                     plotted_any = True
                 except Exception as e:
                     ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")
 
             ax.set_ylabel("Rate (Hz)")
+            
             title = f"Layer {layer_name} — Population Rates" if layer_name is not None else "Population Rates"
             ax.set_title(title)
             if plotted_any:
@@ -246,4 +238,4 @@ class NetworkVisualizer:
         return figs
 
         
-        
+

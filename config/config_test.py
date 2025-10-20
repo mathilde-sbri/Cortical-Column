@@ -1,25 +1,19 @@
 from brian2 import *
 import pandas as pd
+from collections import defaultdict
 
-conn_df = pd.read_csv('scaled_matrix_0_to_0.34-2.csv', index_col=0, skipinitialspace=True)
-conductances =  pd.read_csv('conductance.csv', index_col=0, skipinitialspace=True)
+conn_df = pd.read_csv('scaled_matrix_0_to_0.34.csv', index_col=0, skipinitialspace=True)
+conductances =  pd.read_csv('conductance2.csv', index_col=0, skipinitialspace=True)
 p = 1
-q = 0.5
+q = 1
 
 _LAYER_CONFIGS = {
     'L1': {
         'connection_prob': {
-            'E_E': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'E_PV': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'E_SOM': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'E_VIP': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'PV_E': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'PV_PV': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'SOM_E': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'SOM_PV': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-            'VIP_SOM': p*(conn_df.loc["i1 Htr3a"].to_dict()["i1 Htr3a"]),
-        },
-        'input_rate': 5*Hz,
+     },
+     'conductance': {
+     },
+        'input_rate': 10*Hz,
         'neuron_counts': {
             'E': 8,
             'PV': 1,
@@ -27,101 +21,69 @@ _LAYER_CONFIGS = {
             'VIP': 39
         },
         'poisson_inputs': {
-            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
-            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
+            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 4},
+            'PV': {'target': 'gE', 'weight': 'EXT', 'N': 1},
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 1},
         }
     },
     'L23': {
         'connection_prob': {
-            'E_E'   : p*(conn_df.loc["E2/3"].to_dict()["E2/3"]),
-            'E_PV'  : p*(conn_df.loc["E2/3"].to_dict()["i2/3 Pvalb"]),
-            'E_SOM' : p*(conn_df.loc["E2/3"].to_dict()["i2/3 Sst"]),
-            'E_VIP' : p*(conn_df.loc["E2/3"].to_dict()["i2/3 Htr3a"]),
 
-            'PV_E'  : p*(conn_df.loc["i2/3Pva"].to_dict()["E2/3"]),
-            'PV_PV' : p*(conn_df.loc["i2/3Pva"].to_dict()["i2/3 Pvalb"]),
-
-            'SOM_E' : p*(conn_df.loc["i2/3Sst"].to_dict()["E2/3"]),
-            'SOM_PV': p*(conn_df.loc["i2/3Sst"].to_dict()["i2/3 Pvalb"]),
-
-            'VIP_SOM': p*(conn_df.loc["i2/3Htr"].to_dict()["i2/3 Sst"]),
         },
-        'input_rate': 5*Hz,
+        'conductance': {
+     },
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
         'poisson_inputs': {
-            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
-            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
+            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 60},
+            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 25},
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 25},
         }
     },
 
     'L4': {
         'connection_prob': {
-            'E_E'   : p*(conn_df.loc["E4"].to_dict()["E4"]),
-            'E_PV'  : p*(conn_df.loc["E4"].to_dict()["i4 Pvalb"]),
-            'E_SOM' : p*(conn_df.loc["E4"].to_dict()["i4 Sst"]),
-            'E_VIP' : p*(conn_df.loc["E4"].to_dict()["i4 Htr3a"]),
-
-            'PV_E'  : p*(conn_df.loc["i4Pvalb"].to_dict()["E4"]),
-            'PV_PV' : p*(conn_df.loc["i4Pvalb"].to_dict()["i4 Pvalb"]),
-
-            'SOM_E' : p*(conn_df.loc["i4Sst"].to_dict()["E4"]),
-            'SOM_PV': p*(conn_df.loc["i4Sst"].to_dict()["i4 Pvalb"]),
-
-            'VIP_SOM': p*(conn_df.loc["i4Htr3a"].to_dict()["i4 Sst"]),
+            
         },
-        'input_rate': 5*Hz,
+        'conductance': {
+     },
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 5760, 'PV': 950, 'SOM': 420, 'VIP': 70},
         'poisson_inputs': {
-            'E':  {'target': 'gE', 'rate': 10*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'gE', 'rate': 10*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'E_stim': {'target': 'gE', 'rate': 10*Hz, 'weight': 'EXT', 
-                   'N_fraction_of_E': 0.017, 'onset_time': 0.5*second},
+           'E':  {'target': 'gE',  'weight': 'EXT', 'N': 60},
+            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 25},
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 25},
+    
         }
     },
 
     'L5': {
         'connection_prob': {
-            'E_E'   : p*(conn_df.loc["E5"].to_dict()["E5"]),
-            'E_PV'  : p*(conn_df.loc["E5"].to_dict()["i5 Pvalb"]),
-            'E_SOM' : p*(conn_df.loc["E5"].to_dict()["i5 Sst"]),
-            'E_VIP' : p*(conn_df.loc["E5"].to_dict()["i5 Htr3a"]),
-
-            'PV_E'  : p*(conn_df.loc["i5Pvalb"].to_dict()["E5"]),
-            'PV_PV' : p*(conn_df.loc["i5Pvalb"].to_dict()["i5 Pvalb"]),
-
-            'SOM_E' : p*(conn_df.loc["i5Sst"].to_dict()["E5"]),
-            'SOM_PV': p*(conn_df.loc["i5Sst"].to_dict()["i5 Pvalb"]),
-
-            'VIP_SOM': p*(conn_df.loc["i5Htr3a"].to_dict()["i5 Sst"]),
+           
         },
-        'input_rate': 5*Hz,
+        'conductance': {
+     },
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},
         'poisson_inputs': {
-            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
-            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.012},
+           'E':  {'target': 'gE',  'weight': 'EXT', 'N': 60},
+            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 25},
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 25},
         }
     },
 
     'L6': {
         'connection_prob': {
-            'E_E'   : p*(conn_df.loc["E6"].to_dict()["E6"]),
-            'E_PV'  : p*(conn_df.loc["E6"].to_dict()["i6 Pvalb"]),
-            'E_SOM' : p*(conn_df.loc["E6"].to_dict()["i6 Sst"]),
-            'E_VIP' : p*(conn_df.loc["E6"].to_dict()["i6 Htr3a"]),
-
-            'PV_E'  : p*(conn_df.loc["i6Pvalb"].to_dict()["E6"]),
-            'PV_PV' : p*(conn_df.loc["i6Pvalb"].to_dict()["i6 Pvalb"]),
-
-            'SOM_E' : p*(conn_df.loc["i6Sst"].to_dict()["E6"]),
-            'SOM_PV': p*(conn_df.loc["i6Sst"].to_dict()["i6 Pvalb"]),
-
-            'VIP_SOM': p*(conn_df.loc["i6Htr3a"].to_dict()["i6 Sst"]),
+           
         },
-        'input_rate': 5*Hz,
+        'conductance': {
+     },
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 2040, 'PV': 187, 'SOM': 137, 'VIP': 36},
         'poisson_inputs': {
-            'E':  {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
-            'PV': {'target': 'gE', 'rate': 5*Hz, 'weight': 'EXT', 'N_fraction_of_E': 0.017},
+            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 60},
+            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 25},
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 25},
         }
     }
 }
@@ -144,45 +106,29 @@ def _prob(src_row, tgt_col):
 def _cond(src_row, tgt_col):
     return q*conductances.loc[src_row].to_dict()[tgt_col]
 
-_INTER_LAYER_CONNECTIONS = {}
-_INTER_LAYER_CONDUCTANCES = {}
+
+
+_INTER_LAYER_CONNECTIONS = defaultdict(dict)
+_INTER_LAYER_CONDUCTANCES = defaultdict(dict)
+
 _layers = ['L23', 'L4', 'L5', 'L6']
+_pops = ['E', 'PV', 'SOM', 'VIP']
 
 for src in _layers:
     for dst in _layers:
-        if src == dst:
-            continue  
         s = _layer_csv[src]
         t = _layer_csv[dst]
-        _INTER_LAYER_CONNECTIONS[(src, dst)] = {
-            'E_E'   : _prob(s['E_row'] , t['E_col']),
-            'E_PV'  : _prob(s['E_row'] , t['PV_col']),
-            'E_SOM' : _prob(s['E_row'] , t['SOM_col']),
-            'E_VIP' : _prob(s['E_row'] , t['VIP_col']),
-
-            'PV_E'  : _prob(s['PV_row'], t['E_col']),
-            'PV_PV' : _prob(s['PV_row'], t['PV_col']),
-
-            'SOM_E' : _prob(s['SOM_row'], t['E_col']),
-            'SOM_PV': _prob(s['SOM_row'], t['PV_col']),
-
-            'VIP_SOM': _prob(s['VIP_row'], t['SOM_col']),
-        }
-        _INTER_LAYER_CONDUCTANCES[(src, dst)] = {
-            'E_E'   : _cond(s['E_row'] , t['E_col']),
-            'E_PV'  : _cond(s['E_row'] , t['PV_col']),
-            'E_SOM' : _cond(s['E_row'] , t['SOM_col']),
-            'E_VIP' : _cond(s['E_row'] , t['VIP_col']),
-
-            'PV_E'  : _cond(s['PV_row'], t['E_col']),
-            'PV_PV' : _cond(s['PV_row'], t['PV_col']),
-
-            'SOM_E' : _cond(s['SOM_row'], t['E_col']),
-            'SOM_PV': _cond(s['SOM_row'], t['PV_col']),
-
-            'VIP_SOM': _cond(s['VIP_row'], t['SOM_col']),
-        }
-
+        for src_pop in _pops:
+            for dst_pop in _pops:
+                conn = f'{src_pop}_{dst_pop}'
+                row  = f'{src_pop}_row'
+                col  = f'{dst_pop}_col'
+                if src == dst:
+                    _LAYER_CONFIGS[src].setdefault('connection_prob', {})[conn] = _prob(s[row], t[col])
+                    _LAYER_CONFIGS[src].setdefault('conductance', {})[conn] = _cond(s[row], t[col])
+                else:
+                    _INTER_LAYER_CONNECTIONS[(src, dst)][conn]  = _prob(s[row], t[col])
+                    _INTER_LAYER_CONDUCTANCES[(src, dst)][conn] = _cond(s[row], t[col])
 
 
 tau_e_AMPA = 5*ms
@@ -318,7 +264,7 @@ CONFIG = {
         'E':   {'a': 4*nS, 'b': 130*pA, 'DeltaT': 2*mV, 'C': 97*pF, 'gL': 4.2*nS, 'tauw': 200*ms, 'EL': -66*mV},
         'PV':  {'a': 0*nS, 'b': 0*pA,   'DeltaT': 0.5*mV, 'C': 38*pF, 'gL': 3.8*nS, 'tauw': 50*ms, 'EL': -68*mV},
         'SOM': {'a': 4*nS, 'b': 25*pA,  'DeltaT': 1.5*mV, 'C': 37*pF, 'gL': 2.3*nS, 'tauw': 300*ms, 'EL': -68*mV},
-        'VIP': {'a': 2*nS, 'b': 50*pA,  'DeltaT': 2*mV, 'C': 1537*pF, 'gL': 4*nS, 'tauw': 150*ms, 'EL': -65*mV},
+        'VIP': {'a': 2*nS, 'b': 50*pA,  'DeltaT': 2*mV, 'C': 37*pF, 'gL': 4*nS, 'tauw': 150*ms, 'EL': -65*mV},
     },
     'neurons': {
         'V_RESET': -65.*mV,
@@ -343,16 +289,8 @@ CONFIG = {
     },
     'synapses': {
         'Q': {
-            'PV_PV': 6*nS,
-            'PV_E': 6*nS,
-            'SOM_E': 5*nS,
-            'SOM_PV': 5*nS,
-            'E_E': 1.25*nS,
-            'E_PV': 3.75*nS,
-            'E_SOM': 2.5*nS,
-            'E_VIP': 1.5*nS,
-            'VIP_SOM': 5.0*nS,
-            'EXT': 1.25*nS,
+   
+            'EXT': 0.55*nS,
         },
     },
        

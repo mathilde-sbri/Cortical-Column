@@ -30,7 +30,7 @@ class LFPAnalysis:
         lfp_stable = lfp[start_idx:]
         time_stable = lfp_time[start_idx:]
         
-        lfp_stable = (lfp_stable - np.mean(lfp_stable)) / np.std(lfp_stable)
+        lfp_stable = lfp_stable - np.mean(lfp_stable)
         
         return time_stable, lfp_stable
     
