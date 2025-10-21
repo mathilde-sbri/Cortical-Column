@@ -166,6 +166,7 @@ class NetworkVisualizer:
 
                     ax.plot(t, r, label=pop_key)
                     ax.set_xlim(800, 1600)
+                    ax.set_ylim(0, 10)
                     plotted_any = True
                 except Exception as e:
                     ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")

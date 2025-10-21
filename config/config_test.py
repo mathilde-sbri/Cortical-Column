@@ -4,8 +4,8 @@ from collections import defaultdict
 
 conn_df = pd.read_csv('scaled_matrix_0_to_0.34.csv', index_col=0, skipinitialspace=True)
 conductances =  pd.read_csv('conductance2.csv', index_col=0, skipinitialspace=True)
-p = 1
-q = 1
+p = 1.5  
+q = 2.0  
 
 _LAYER_CONFIGS = {
     'L1': {
@@ -90,23 +90,33 @@ _LAYER_CONFIGS = {
 
 _layer_csv = {
     
-    'L23': {'E_row': 'E2/3',   'PV_row': 'i2/3Pva',  'SOM_row': 'i2/3Sst',  'VIP_row': 'i2/3Htr',
-            'E_col': 'E2/3',   'PV_col': 'i2/3 Pvalb','SOM_col': 'i2/3 Sst','VIP_col': 'i2/3 Htr3a'},
+    'L23': {'E_row': 'E2/3',   'PV_row': 'i2/3Pvalb','SOM_row': 'i2/3Sst',  'VIP_row': 'i2/3Htr3a',
+            'E_col': 'E2/3',   'PV_col': 'i2/3Pvalb','SOM_col': 'i2/3Sst',  'VIP_col': 'i2/3Htr3a'},
     'L4' : {'E_row': 'E4',     'PV_row': 'i4Pvalb',  'SOM_row': 'i4Sst',    'VIP_row': 'i4Htr3a',
-            'E_col': 'E4',     'PV_col': 'i4 Pvalb', 'SOM_col': 'i4 Sst',   'VIP_col': 'i4 Htr3a'},
+            'E_col': 'E4',     'PV_col': 'i4Pvalb', 'SOM_col': 'i4Sst',   'VIP_col': 'i4Htr3a'},
     'L5' : {'E_row': 'E5',     'PV_row': 'i5Pvalb',  'SOM_row': 'i5Sst',    'VIP_row': 'i5Htr3a',
-            'E_col': 'E5',     'PV_col': 'i5 Pvalb', 'SOM_col': 'i5 Sst',   'VIP_col': 'i5 Htr3a'},
+            'E_col': 'E5',     'PV_col': 'i5Pvalb', 'SOM_col': 'i5Sst',   'VIP_col': 'i5Htr3a'},
     'L6' : {'E_row': 'E6',     'PV_row': 'i6Pvalb',  'SOM_row': 'i6Sst',    'VIP_row': 'i6Htr3a',
-            'E_col': 'E6',     'PV_col': 'i6 Pvalb', 'SOM_col': 'i6 Sst',   'VIP_col': 'i6 Htr3a'},
+            'E_col': 'E6',     'PV_col': 'i6Pvalb', 'SOM_col': 'i6Sst',   'VIP_col': 'i6Htr3a'},
 }
 
 def _prob(src_row, tgt_col):
-    return p * (conn_df.loc[src_row].to_dict()[tgt_col])
+    try:
+        val = conn_df.loc[src_row].to_dict()[tgt_col]
+        return p * val
+    except KeyError:
+        print(f"WARNING: Could not find connection {src_row} -> {tgt_col}")
+        return 0
+
+q_excitatory = 1.0  
+q_inhibitory = 3.0  
 
 def _cond(src_row, tgt_col):
-    return q*conductances.loc[src_row].to_dict()[tgt_col]
-
-
+    base_cond = conductances.loc[src_row].to_dict()[tgt_col]
+    if any(x in src_row for x in ['Pvalb', 'Sst', 'Htr3a', 'Htr']):
+        return q_inhibitory * base_cond
+    else:
+        return q_excitatory * base_cond
 
 _INTER_LAYER_CONNECTIONS = defaultdict(dict)
 _INTER_LAYER_CONDUCTANCES = defaultdict(dict)
@@ -126,9 +136,9 @@ for src in _layers:
                 if src == dst:
                     _LAYER_CONFIGS[src].setdefault('connection_prob', {})[conn] = _prob(s[row], t[col])
                     _LAYER_CONFIGS[src].setdefault('conductance', {})[conn] = _cond(s[row], t[col])
-                else:
-                    _INTER_LAYER_CONNECTIONS[(src, dst)][conn]  = _prob(s[row], t[col])
-                    _INTER_LAYER_CONDUCTANCES[(src, dst)][conn] = _cond(s[row], t[col])
+                # else:
+                #     _INTER_LAYER_CONNECTIONS[(src, dst)][conn]  = _prob(s[row], t[col])
+                #     _INTER_LAYER_CONDUCTANCES[(src, dst)][conn] = _cond(s[row], t[col])
 
 
 tau_e_AMPA = 5*ms

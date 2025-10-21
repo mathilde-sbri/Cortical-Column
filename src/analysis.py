@@ -29,9 +29,8 @@ class LFPAnalysis:
         start_idx = np.argmax(lfp_time >= start_time_ms)
         lfp_stable = lfp[start_idx:]
         time_stable = lfp_time[start_idx:]
-        
-        lfp_stable = lfp_stable - np.mean(lfp_stable)
-        
+        if np.std(lfp_stable) != 0 :
+            lfp_stable = (lfp_stable - np.mean(lfp_stable))/np.std(lfp_stable)
         return time_stable, lfp_stable
     
     @staticmethod

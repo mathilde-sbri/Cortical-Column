@@ -32,7 +32,7 @@ def main():
 
     
     E_grp = L4.neuron_groups['E']
-    E20 = PoissonInput(E_grp, 'gE', N=N, rate=20*Hz, weight=w)
+    E20 = PoissonInput(E_grp, 'gE', N=N, rate=10*Hz, weight=w)
 
     L4.poisson_inputs['E_20'] = E20
     column.network.add(E20)
@@ -40,7 +40,7 @@ def main():
     NEpv = cfg['neuron_counts']['PV']
     Npv = cfg['poisson_inputs']['PV']['N'] 
     w = CONFIG['synapses']['Q']['EXT']
-    PV20 = PoissonInput(L4.neuron_groups['PV'], 'gE', N=Npv, rate=20*Hz, weight=w)
+    PV20 = PoissonInput(L4.neuron_groups['PV'], 'gE', N=Npv, rate=10*Hz, weight=w)
     L4.poisson_inputs['PV_20'] = PV20
     column.network.add(PV20)
 
@@ -63,7 +63,51 @@ def main():
             k: v for k, v in monitors.items() if 'rate' in k
         }
     
+    def detailed_activity_check(layer_name, state_monitor, spike_monitor, simulation_time):
+        print(f"\n{'='*50}")
+        print(f"Layer: {layer_name}")
+        print(f"{'='*50}")
+        
+        for pop in ['E', 'PV', 'SOM', 'VIP']:
+            spike_key = f'{pop}_spikes'
+            state_key = f'{pop}_state'
+            
+            if spike_key not in monitors:
+                continue
+                
+            spike_mon = spike_monitor[spike_key]
+            state_mon = state_monitor[state_key]
+            
+            n_neurons = len(spike_mon.source)
+            n_spikes = len(spike_mon.t)
+            
+            if n_spikes > 0:
+                rate = n_spikes / (n_neurons * simulation_time/second)
+                active_neurons = len(np.unique(spike_mon.i))
+                pct_active = 100 * active_neurons / n_neurons
+            else:
+                rate = 0
+                active_neurons = 0
+                pct_active = 0
+            
+            # Check conductance statistics over time
+            gE_mean = np.mean(state_mon.gE/nS)
+            gE_max = np.max(state_mon.gE/nS)
+            gI_mean = np.mean(state_mon.gI/nS)
+            gI_max = np.max(state_mon.gI/nS)
+            
+            print(f"\n{pop} population (N={n_neurons}):")
+            print(f"  Firing rate: {rate:.2f} Hz")
+            print(f"  Active neurons: {active_neurons}/{n_neurons} ({pct_active:.1f}%)")
+            print(f"  gE: mean={gE_mean:.4f} nS, max={gE_max:.3f} nS")
+            print(f"  gI: mean={gI_mean:.4f} nS, max={gI_max:.3f} nS")
+            
+            if gE_mean < 0.01 and gI_mean < 0.01:
+                print(f"  ⚠️  WARNING: Very low synaptic activity!")
+            if pct_active < 10:
+                print(f"  ⚠️  WARNING: <10% of neurons are active!")
 
+    detailed_activity_check('L5', state_monitors['L5'], spike_monitors['L5'], 4000*ms)
     # E_rate = rate_monitors["L4"]["E_rate"]
 
     # t_ms = E_rate.t / ms
