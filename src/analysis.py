@@ -10,7 +10,7 @@ class LFPAnalysis:
     
     @staticmethod
     def calculate_lfp(monitor, neuron_type='E'):
-        """Calculate LFP using current inputs, inspired from the paper of Mazzoni"""
+        """Calculate LFP using current inputs into E neurons, inspired from the paper of Mazzoni"""
         ge = np.array(monitor.gE/nS)  
         gi = np.array(monitor.gI/nS)  
         V = np.array(monitor.v/mV)
@@ -19,6 +19,7 @@ class LFPAnalysis:
         I_GABA = np.abs(gi * (-80 - V))  # Ei = -80mV
         
         total_current = np.sum(I_AMPA + I_GABA, axis=0)
+        
         return total_current
     
     @staticmethod

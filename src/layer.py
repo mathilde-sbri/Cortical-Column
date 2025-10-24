@@ -28,6 +28,8 @@ class CorticalLayer:
         self._create_internal_connections()
         self._create_monitors()
 
+        
+
     def _create_neuron_groups(self):
         models_cfg = self.config.get('models', {})
         common_namespace = dict(models_cfg.get('common_namespace', {}))

@@ -10,6 +10,22 @@ from src.column import CorticalColumn
 from src.visualization import NetworkVisualizer
 from src.analysis import LFPAnalysis
 
+def add_heterogeneity_to_layer(layer, config):
+    """Add parameter variability to break synchrony"""
+    for pop_name, neuron_group in layer.neuron_groups.items():
+        n = len(neuron_group)
+        base = config['intrinsic_params'][pop_name]
+        
+        neuron_group.C = base['C'] * np.abs(1 + np.random.randn(n) * 0.15)
+        neuron_group.gL = base['gL'] * np.abs(1 + np.random.randn(n) * 0.12)
+        neuron_group.tauw = base['tauw'] * np.abs(1 + np.random.randn(n) * 0.15)
+        neuron_group.b = base['b'] * np.abs(1 + np.random.randn(n) * 0.20)
+        neuron_group.a = base['a'] * np.abs(1 + np.random.randn(n) * 0.15)
+        
+        
+
+
+
 def main():
   
     np.random.seed(CONFIG['simulation']['RANDOM_SEED'])
@@ -18,6 +34,8 @@ def main():
     
     print("Creating cortical column...")
     column = CorticalColumn(column_id=0, config=CONFIG)
+    for layer_name, layer in column.layers.items():
+        add_heterogeneity_to_layer(layer, CONFIG)
     
     all_monitors = column.get_all_monitors()
     
@@ -26,23 +44,28 @@ def main():
 
     L4 = column.layers['L4']
     cfg = CONFIG['layers']['L4']
-    NE = cfg['neuron_counts']['E']
-    N = cfg['poisson_inputs']['E']['N'] 
+    N = cfg['poisson_inputs']['E']['N']/2
     w = CONFIG['synapses']['Q']['EXT']
 
     
     E_grp = L4.neuron_groups['E']
-    E20 = PoissonInput(E_grp, 'gE', N=N, rate=10*Hz, weight=w)
+    E20 = PoissonInput(E_grp, 'gE', N=N, rate=5*Hz, weight=w)
 
     L4.poisson_inputs['E_20'] = E20
     column.network.add(E20)
 
-    NEpv = cfg['neuron_counts']['PV']
-    Npv = cfg['poisson_inputs']['PV']['N'] 
+    Npv = cfg['poisson_inputs']['PV']['N']/2 
     w = CONFIG['synapses']['Q']['EXT']
-    PV20 = PoissonInput(L4.neuron_groups['PV'], 'gE', N=Npv, rate=10*Hz, weight=w)
+    PV20 = PoissonInput(L4.neuron_groups['PV'], 'gE', N=Npv, rate=5*Hz, weight=w)
     L4.poisson_inputs['PV_20'] = PV20
     column.network.add(PV20)
+
+    L6 = column.layers['L6']
+    N_L6 = CONFIG['layers']['L6']['poisson_inputs']['E']['N']/2
+    E20_L6 = PoissonInput(L6.neuron_groups['E'], 'gE', N=N_L6, rate=4*Hz, weight=w)
+
+    Npv_L6 = CONFIG['layers']['L6']['poisson_inputs']['PV']['N']/2
+    PV20_L6 = PoissonInput(L6.neuron_groups['PV'], 'gE', N=Npv_L6, rate=4*Hz, weight=w)
 
     column.network.run(CONFIG['simulation']['SIMULATION_TIME'] - 1000*ms)
 
@@ -107,19 +130,11 @@ def main():
             if pct_active < 10:
                 print(f"  ⚠️  WARNING: <10% of neurons are active!")
 
+    detailed_activity_check('L6', state_monitors['L6'], spike_monitors['L6'], 4000*ms)
     detailed_activity_check('L5', state_monitors['L5'], spike_monitors['L5'], 4000*ms)
-    # E_rate = rate_monitors["L4"]["E_rate"]
+    detailed_activity_check('L4', state_monitors['L4'], spike_monitors['L4'], 4000*ms)
+    detailed_activity_check('L23', state_monitors['L23'], spike_monitors['L23'], 4000*ms)
 
-    # t_ms = E_rate.t / ms
-    # r_hz = E_rate.smooth_rate(window='flat', width=10.1*ms) / Hz
-
-    # plt.figure()
-    # plt.plot(t_ms, r_hz, linewidth=3)
-    # plt.xlabel('Time (ms)')
-
-    # plt.ylabel('Rate (Hz)')
-    # plt.tight_layout()
-    # plt.show()
         
     fig1 = NetworkVisualizer.plot_raster(spike_monitors, CONFIG['layers'])
 
