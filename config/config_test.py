@@ -33,7 +33,7 @@ _LAYER_CONFIGS = {
         'poisson_inputs': {
             'E':  {'target': 'gE',  'weight': 'EXT', 'N': 80},  
             'PV': {'target': 'gE',  'weight': 'EXT', 'N': 35},  
-            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 30},
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 35},
             'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 20},
         }
     },

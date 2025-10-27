@@ -45,17 +45,6 @@ class NetworkVisualizer:
         plt.tight_layout()
         return fig
     
-    @staticmethod
-    def plot_population_psd(pop_rate_dict, fmax=100, title='Population PSDs', figsize=(10, 5)):
-        plt.figure(figsize=figsize)
-        for name, (freqs, psd) in pop_rate_dict.items():
-            mask = freqs <= fmax
-            plt.plot(freqs[mask], psd[mask], label=name)
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Normalized power')
-        plt.title(title)
-        plt.legend(frameon=False)
-        plt.tight_layout()
     
     @staticmethod
     def plot_lfp(state_monitors, layer_configs, figsize=(15, 12)):
@@ -106,33 +95,7 @@ class NetworkVisualizer:
         plt.tight_layout()
         return fig
     
-    @staticmethod
-    def plot_power_spectra_loglog(state_monitors, layer_configs, figsize=(10,12)):
-        fig, axes = plt.subplots(len(state_monitors), 1, figsize=figsize)
-        if len(state_monitors) == 1:
-            axes = [axes]
-        
-        colors = ['b', 'g', 'purple', 'orange', 'red']
-        fmin=1
-        fmax=200
-
-        for i, (layer_name, monitors) in enumerate(state_monitors.items()):
-            if 'E_state' in monitors:
-                time_stable , lfp_stable = LFPAnalysis.process_lfp(monitors['E_state'])
-                freq, psd = LFPAnalysis.power_spectrum_loglog(lfp_stable, time_stable)
-                
-                ax = axes[i]
-                color = colors[i % len(colors)]
-                mask = (freq >= fmin) & (freq <= fmax)
-                ax.loglog(freq[mask], psd[mask], lw=2, color=color, label=layer_name)
-                ax.set_xlabel("Frequency (Hz)")
-                ax.set_ylabel("Power (a.u.)")
-                ax.set_title("LFP Power Spectrum (log–log)")
-                ax.grid(True, which="both", ls="--", alpha=0.5)
-        
-        axes[-1].set_xlabel('Frequency (Hz)', fontsize=18)
-        plt.tight_layout()
-        return fig
+  
 
     
     @staticmethod
@@ -166,7 +129,7 @@ class NetworkVisualizer:
 
                     ax.plot(t, r, label=pop_key)
                     ax.set_xlim(800, 1600)
-                    ax.set_ylim(0, 50)
+                    #ax.set_ylim(0, 50)
                     plotted_any = True
                 except Exception as e:
                     ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")
@@ -185,30 +148,49 @@ class NetworkVisualizer:
     
     @staticmethod
     def plot_spectrogram(state_monitors, layer_configs, fmax=100, win_ms=250, step_ms=25,
-                         light_window=(2.0, 4.0), figsize=(12, 5)):
+                        light_window=(2.0, 4.0), figsize=(12, 5)):
+            
+        layer_names = list(layer_configs.keys()) if isinstance(layer_configs, dict) else list(state_monitors.keys())
+        n_layers = len(layer_names)
+        fig, axes = plt.subplots(n_layers, 1, sharex=True, figsize=(figsize[0], figsize[1] * n_layers))
 
-        import matplotlib.pyplot as plt
-        figs = []
-        for layer_name, monitors in state_monitors.items():
+        if n_layers == 1:
+            axes = [axes]
+
+        for idx, (layer_name, monitors) in enumerate(state_monitors.items()):
             if 'E_state' not in monitors:
                 continue
+
+            ax = axes[idx]
+
             time_ms, lfp = LFPAnalysis.process_lfp(monitors['E_state'])
-            t_spec, f, Sxx = LFPAnalysis.compute_spectrogram(time_ms, lfp, fmax=fmax,
-                                                             win_ms=win_ms, step_ms=step_ms)
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
-            im = ax.imshow(10*np.log10(Sxx + 1e-20), origin='lower', aspect='auto',
-                           extent=[t_spec[0], t_spec[-1], f[0], f[-1]])
+
+            f, t_spec, Sxx = LFPAnalysis.compute_spectrogram(
+                lfp, fs=10000, window_ms=100, overlap=0.85
+            )
+
+            Sxx_db = 10 * np.log10(Sxx + 1e-20)
+            fmask = f <= fmax
+
+            im = ax.pcolormesh(t_spec / 1000, f[fmask], Sxx_db[fmask, :],
+                            shading='gouraud', cmap='viridis',
+                            vmin=np.percentile(Sxx_db[fmask, :], 5),
+                            vmax=np.percentile(Sxx_db[fmask, :], 95))
+
             ax.set_title(f'{layer_name} LFP Spectrogram')
-            ax.set_xlabel('Time (s)')
-            ax.set_ylabel('Frequency (Hz)')
-            cbar = plt.colorbar(im, ax=ax)
-            cbar.set_label('Power (dB)')
+            ax.set_ylim([0, fmax])
+            ax.set_ylabel('Freq (Hz)')
+
             if light_window is not None:
                 on, off = light_window
-                ax.axvline(on, color='w', ls='--', lw=1)
-                ax.axvline(off, color='w', ls='--', lw=1)
-            figs.append(fig)
-        return figs
+                ax.axvline(on, color='w', ls='--', lw=1, alpha=0.7)
+                ax.axvline(off, color='w', ls='--', lw=1, alpha=0.7)
+
+        axes[-1].set_xlabel('Time (s)')
+        fig.colorbar(im, ax=axes, label='Power (dB)')
+        plt.tight_layout()
+
+        return fig
 
     @staticmethod
     def plot_peak_freq_track(state_monitors, layer_configs, f_gamma=(20, 80), fmax=100,

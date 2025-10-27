@@ -71,11 +71,9 @@ class CorticalColumn:
                     group1, group2 = conn.split("_")
                     syn = Synapses(self.layers[source_layer].get_neuron_group(group1),
                                 self.layers[target_layer].get_neuron_group(group2),
-                                on_pre=on_pre)
+                                on_pre=on_pre, delay=1*ms + rand()*2*ms)
                     syn.connect(p=prob)
-                    delay = self.config.get('time_constants', {}).get('DELAY', 0*ms)
-                    try: syn.delay = delay
-                    except: pass
+ 
                     self.inter_layer_synapses[connection_name] = syn
 
 

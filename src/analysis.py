@@ -5,6 +5,7 @@ import numpy as np
 from scipy.signal import welch, spectrogram
 from brian2 import *
 from scipy.ndimage import gaussian_filter1d
+from spectrum import pmtm
 
 class LFPAnalysis:
     
@@ -35,47 +36,56 @@ class LFPAnalysis:
         return time_stable, lfp_stable
     
     @staticmethod
-    def compute_power_spectrum(lfp_signal, fs=10000, nperseg=4096):
-        freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg, noverlap=nperseg//2)
-
-        return freq, psd
-    
-    @staticmethod
-    def power_spectrum_loglog(lfp_signal, time_ms, fmin=1, fmax=500, nperseg=4096, ax=None):
+    def compute_power_spectrum(lfp_signal, fs=10000, method='welch', nperseg=None):
+        if method == 'multitaper':
+            
+            if nperseg is None:
+                nperseg = len(lfp_signal)
+            
+            NW = 2
+            psd, freq = pmtm(lfp_signal[:nperseg], NW=NW, NFFT=nperseg)
+            
+            return freq, psd
         
-        t_s = np.asarray(time_ms) / 1000.0
-        fs = 1.0 / np.median(np.diff(t_s))
+        elif method == 'welch':
+            if nperseg is None:
+                nperseg = min(4096, len(lfp_signal) // 4)
+            
+            freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg, 
+                            noverlap=nperseg//2, window='hann')
+            return freq, psd
+        
+        else:
+            raise ValueError("method must be 'multitaper' or 'welch'")
 
-        freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg, noverlap=nperseg//2)
-
-        return freq, psd
-
-    
     @staticmethod
-    def compute_spectrogram(time_ms, lfp, fmax=100, win_ms=500, step_ms=10, nfft=None):
+    def compute_power_spectrum_epochs(lfp_signal, fs=10000, epoch_duration_ms=1000, method='multitaper'):
+        epoch_samples = int(epoch_duration_ms * fs / 1000)
+        n_epochs = len(lfp_signal) // epoch_samples
+        
+        psds = []
+        for i in range(n_epochs):
+            start_idx = i * epoch_samples
+            end_idx = start_idx + epoch_samples
+            epoch = lfp_signal[start_idx:end_idx]
+            
+            freq, psd = LFPAnalysis.compute_power_spectrum(epoch, fs=fs, method=method, nperseg=epoch_samples)
+            psds.append(psd)
+        
+        psd_mean = np.mean(psds, axis=0)
+        psd_std = np.std(psds, axis=0)
+        
+        return freq, psd_mean, psd_std
 
-        t_s = np.asarray(time_ms)/1000.0
-        dt = float(np.median(np.diff(t_s)))
-        fs = 1.0/dt
-
-        nperseg = max(16, int(round(win_ms/1000.0 * fs)))
-        step = max(1, int(round(step_ms/1000.0 * fs)))
-        noverlap = max(0, nperseg - step)
-        if nfft is None:
-            pow2 = int(2**np.ceil(np.log2(nperseg)))
-            nfft = max(pow2, nperseg)
-
-        nperseg = min(nperseg, len(lfp))
-        noverlap = min(noverlap, nperseg-1)
-        if len(lfp) < nperseg:
-            raise ValueError("lfp shorter than window")
-
-        f, t_spec, Sxx = spectrogram(
-            lfp, fs=fs, nperseg=nperseg, noverlap=noverlap, nfft=nfft,
-            window='hann', detrend='constant', scaling='density', mode='psd'
-        )
-        mask = f <= fmax
-        return t_spec, f[mask], Sxx[mask, :]
+    @staticmethod
+    def compute_spectrogram(lfp_signal, fs=10000, window_ms=50, overlap=0.9):
+        nperseg = int(window_ms * fs / 1000)
+        noverlap = int(nperseg * overlap)
+        
+        freq, time, Sxx = spectrogram(lfp_signal, fs=fs, nperseg=nperseg,
+                                    noverlap=noverlap, window='hann')
+        
+        return freq, time, Sxx
 
 
     @staticmethod
