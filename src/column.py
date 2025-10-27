@@ -62,7 +62,7 @@ class CorticalColumn:
                     excitatory = (pre == 'E')
                     connection_name = f"{source_layer}_{target_layer}_{conn}"
                     is_current = (self.config['models'].get('synapse_model', 'conductance').lower() == 'current')
-                    W = self.config['synapses']['Q'][conn]
+                    W = self.config['inter_layer_conductances'][(source_layer, target_layer)][conn]
                     conductance = self.config['inter_layer_conductances'][source_layer, target_layer][conn]
                     if is_current:
                         on_pre = f"sE_post += {float(W/mV)}*mV"
@@ -71,11 +71,9 @@ class CorticalColumn:
                     group1, group2 = conn.split("_")
                     syn = Synapses(self.layers[source_layer].get_neuron_group(group1),
                                 self.layers[target_layer].get_neuron_group(group2),
-                                on_pre=on_pre)
+                                on_pre=on_pre, delay=1*ms + rand()*2*ms)
                     syn.connect(p=prob)
-                    delay = self.config.get('time_constants', {}).get('DELAY', 0*ms)
-                    try: syn.delay = delay
-                    except: pass
+ 
                     self.inter_layer_synapses[connection_name] = syn
 
 

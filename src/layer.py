@@ -28,6 +28,8 @@ class CorticalLayer:
         self._create_internal_connections()
         self._create_monitors()
 
+        
+
     def _create_neuron_groups(self):
         models_cfg = self.config.get('models', {})
         common_namespace = dict(models_cfg.get('common_namespace', {}))
@@ -112,8 +114,8 @@ class CorticalLayer:
                 set_if_exists(g, 'mu_drive',   mu)
                 set_if_exists(g, 'sigma_drive', sigma)
 
-    def _on_pre(self, weight_key, excitatory=False):
-        W = self.config['synapses']['Q'][weight_key]
+    def _on_pre(self, weight_key, cmap, excitatory=False):
+        W = cmap
         if self.is_current: # TP CHANGE to ACCOunt FOR PV SOM CONDUCTANCES ETC
             var = 'sI' if not excitatory else 'sE'
             val = float(W / mV)
@@ -121,7 +123,7 @@ class CorticalLayer:
         else:
             pre, post = weight_key.split('_')
             var = 'g' + pre
-            val = float(W / nS)
+            val = W
             return f"{var}_post += {val}*nS"
 
     def _apply_delay(self, syn):
@@ -133,6 +135,7 @@ class CorticalLayer:
 
     def _create_internal_connections(self):
         pmap = self.layer_config.get('connection_prob', {})
+        cmap =self.layer_config.get('conductance', {})
         for connection, p in pmap.items():
             pre, post = connection.split('_')
             if pre not in self.neuron_groups or post not in self.neuron_groups:
@@ -140,7 +143,7 @@ class CorticalLayer:
             excitatory = (pre == 'E')
             syn = Synapses(
                 self.neuron_groups[pre], self.neuron_groups[post],
-                on_pre=self._on_pre(connection, excitatory=excitatory)
+                on_pre=self._on_pre(connection, cmap[connection], excitatory=excitatory)
             )
             syn.connect(p=float(p))
             self._apply_delay(syn)
@@ -158,9 +161,8 @@ class CorticalLayer:
             if 'N' in pconf and pconf['N'] is not None:
                 N = int(pconf['N'])
             else:
-                frac = float(pconf.get('N_fraction_of_E', 0.0))
-                NE = int(self.layer_config['neuron_counts'].get('E', 0))
-                N = int(frac * NE)
+                N = float(pconf.get('N', 0.0))
+          
 
             w_cfg = pconf.get('weight', 'EXT')
             weight = self.config['synapses']['Q'][w_cfg] if isinstance(w_cfg, str) else w_cfg
