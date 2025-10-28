@@ -1,19 +1,12 @@
 import pandas as pd
 from collections import defaultdict
 
-# Import your config (assumes the config file is named config.py)
 from config.config_test import CONFIG
 
 def count_synapses():
-    """
-    Analyze synapse counts in the V1 column model.
-    Returns detailed breakdown of connections, including per-layer incoming
-    synapses per neuron (recurrent-only and recurrent+external).
-    """
+
     layers = CONFIG['layers']
     inter_layer_conn = CONFIG['inter_layer_connections']
-
-    # Storage for results
     results = {
         'intra_layer': defaultdict(lambda: defaultdict(int)),
         'inter_layer': defaultdict(lambda: defaultdict(int)),
@@ -22,23 +15,17 @@ def count_synapses():
         'by_target': defaultdict(int),
         'total': 0
     }
-
-    # NEW: incoming (targeted) synapses per layer and per (layer, cell_type)
     incoming_recurrent_by_layer = defaultdict(int)
     incoming_recurrent_by_layer_type = defaultdict(lambda: defaultdict(int))
 
-    # NEW: external inputs per layer and per (layer, cell_type)
     external_by_layer = defaultdict(int)
     external_by_layer_type = defaultdict(lambda: defaultdict(int))
-
-    # Convenience
     cell_types = ['E', 'PV', 'SOM', 'VIP']
 
     print("="*80)
     print("V1 COLUMN SYNAPSE ANALYSIS")
     print("="*80)
 
-    # Count intra-layer connections (recurrent)
     print("\n### INTRA-LAYER CONNECTIONS ###\n")
     for layer_name, layer_config in layers.items():
         print(f"\n{layer_name}:")
@@ -57,7 +44,6 @@ def count_synapses():
                 conn_key = f'{src_type}_{tgt_type}'
                 prob = layer_config['connection_prob'].get(conn_key, 0)
 
-                # Expected number of synapses
                 n_synapses = int(n_src * n_tgt * prob)
 
                 if n_synapses > 0:
@@ -67,24 +53,20 @@ def count_synapses():
                     results['intra_layer'][layer_name][conn_key] = n_synapses
                     layer_total += n_synapses
 
-                    # Categorize by E/I
                     if src_type == 'E':
                         results['by_type']['excitatory'] += n_synapses
                     else:
                         results['by_type']['inhibitory'] += n_synapses
 
-                    # Global tallies
                     results['by_source'][f'{layer_name}_{src_type}'] += n_synapses
                     results['by_target'][f'{layer_name}_{tgt_type}'] += n_synapses
                     results['total'] += n_synapses
 
-                    # NEW: incoming recurrent for this target layer & cell type
                     incoming_recurrent_by_layer[layer_name] += n_synapses
                     incoming_recurrent_by_layer_type[layer_name][tgt_type] += n_synapses
 
         print(f"  → {layer_name} TOTAL: {layer_total:,} synapses")
 
-    # Count inter-layer connections (recurrent)
     print("\n\n### INTER-LAYER CONNECTIONS ###\n")
     inter_total = 0
 
@@ -117,25 +99,21 @@ def count_synapses():
                     results['inter_layer'][(src_layer, tgt_layer)][conn_key] = n_synapses
                     pair_total += n_synapses
 
-                    # Categorize by E/I
                     if src_type == 'E':
                         results['by_type']['excitatory'] += n_synapses
                     else:
                         results['by_type']['inhibitory'] += n_synapses
 
-                    # Global tallies
                     results['by_source'][f'{src_layer}_{src_type}'] += n_synapses
                     results['by_target'][f'{tgt_layer}_{tgt_type}'] += n_synapses
                     results['total'] += n_synapses
 
-                    # NEW: incoming recurrent for target layer & cell type
                     incoming_recurrent_by_layer[tgt_layer] += n_synapses
                     incoming_recurrent_by_layer_type[tgt_layer][tgt_type] += n_synapses
 
         print(f"  → {src_layer}→{tgt_layer} TOTAL: {pair_total:,} synapses")
         inter_total += pair_total
 
-    # Summary statistics (global)
     print("\n\n" + "="*80)
     print("SUMMARY STATISTICS")
     print("="*80)
@@ -152,7 +130,6 @@ def count_synapses():
     print(f"  Inhibitory:   {results['by_type']['inhibitory']:,} "
           f"({100*results['by_type']['inhibitory']/results['total']:.1f}%)")
 
-    # Neuron counts
     print(f"\nTotal neurons by layer:")
     neuron_counts_by_layer = {}
     total_neurons = 0
@@ -165,7 +142,6 @@ def count_synapses():
 
     print(f"\nAverage synapses per neuron (global, recurrent only): {results['total']/total_neurons:.1f}")
 
-    # External inputs (Poisson)
     print("\n\n" + "="*80)
     print("EXTERNAL INPUTS (Poisson)")
     print("="*80)
@@ -189,12 +165,10 @@ def count_synapses():
     print(f"Total recurrent synapses: {results['total']:,}")
     print(f"Grand total (external + recurrent): {total_ext + results['total']:,}")
 
-    # === NEW: PER-LAYER SYNAPSES/NEURON (including inter-layer) ===
     print("\n\n" + "="*80)
     print("PER-LAYER SYNAPSES PER NEURON (incoming)")
     print("="*80)
 
-    # Build a DataFrame summary per layer
     rows = []
     for layer_name in layers.keys():
         n_neurons = neuron_counts_by_layer[layer_name]
@@ -215,7 +189,6 @@ def count_synapses():
     print("\n>>> Per-layer incoming synapses & synapses/neuron (recurrent + external):\n")
     print(df_layer.to_string())
 
-    # === OPTIONAL: PER-LAYER, PER-CELL-TYPE SYNAPSES/NEURON ===
     print("\n\n" + "="*80)
     print("PER-LAYER, PER-CELL-TYPE SYNAPSES PER NEURON (incoming)")
     print("="*80)
@@ -246,7 +219,6 @@ def count_synapses():
     else:
         print("No per-cell-type data available in neuron_counts; skipping.")
 
-    # Realism check
     print("\n\n" + "="*80)
     print("REALISM CHECK")
     print("="*80)
@@ -261,7 +233,6 @@ def count_synapses():
     print(f"  - Avg synapses/neuron (recurrent only, global): {results['total']/total_neurons:.1f}")
     print(f"  - Avg synapses/neuron (incl. external, global): {(results['total']+total_ext)/total_neurons:.1f}")
 
-    # Attach new artifacts to results for programmatic use
     results['incoming_recurrent_by_layer'] = dict(incoming_recurrent_by_layer)
     results['incoming_recurrent_by_layer_type'] = {L: dict(cts) for L, cts in incoming_recurrent_by_layer_type.items()}
     results['external_by_layer'] = dict(external_by_layer)

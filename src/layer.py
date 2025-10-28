@@ -4,6 +4,7 @@ Layer class implementation
 import brian2 as b2
 from brian2 import *
 import numpy as np
+import cleo
 
 class CorticalLayer:
     """
@@ -46,18 +47,10 @@ class CorticalLayer:
                 refractory=self.config['neurons']['T_REF'],
                 namespace=common_namespace
             )
-            # self.neuron_groups[pop_name].EL    = self.config['intrinsic_params'][pop_name]['EL']    + 1.0*mV*randn(n)      # ±1 mV
-            # self.neuron_groups[pop_name].C     = self.config['intrinsic_params'][pop_name]['C']     * (1 + 0.10*randn(n)) 
-            # self.neuron_groups[pop_name].gL    = self.config['intrinsic_params'][pop_name]['gL']    * (1 + 0.10*randn(n))
-            # self.neuron_groups[pop_name].DeltaT= self.config['intrinsic_params'][pop_name]['DeltaT']* (1 + 0.10*randn(n))
-            # self.neuron_groups[pop_name].tauw  = self.config['intrinsic_params'][pop_name]['tauw']  * (1 + 0.10*randn(n))
+        
+            cleo.coords.assign_coords_rand_rect_prism(self.neuron_groups[pop_name],xlim= self.layer_config['coordinates']['x'], ylim=self.layer_config['coordinates']['y'], zlim=self.layer_config['coordinates']['z'])
 
-            # self.neuron_groups[pop_name].gE = np.random.exponential(0.5) * nS
-            # self.neuron_groups[pop_name].gPV = np.random.exponential(0.3) * nS
-            # self.neuron_groups[pop_name].gSOM = np.random.exponential(0.3) * nS
-            # self.neuron_groups[pop_name].gVIP = np.random.exponential(0.2) * nS
-            # self.neuron_groups[pop_name].I = (200*pA) + (50*pA) * randn(n) 
-            # self.neuron_groups[pop_name].v = 'V_reset + rand() * (VT - V_reset)'
+      
 
     def _set_neuron_parameters(self):
         def set_if_exists(group, attr, value):
@@ -126,12 +119,6 @@ class CorticalLayer:
             val = W
             return f"{var}_post += {val}*nS"
 
-    def _apply_delay(self, syn):
-        delay = self.config.get('time_constants', {}).get('DELAY', 0*ms)
-        try:
-            syn.delay = delay
-        except Exception:
-            pass
 
     def _create_internal_connections(self):
         pmap = self.layer_config.get('connection_prob', {})
@@ -146,7 +133,6 @@ class CorticalLayer:
                 on_pre=self._on_pre(connection, cmap[connection], excitatory=excitatory)
             )
             syn.connect(p=float(p))
-            self._apply_delay(syn)
             self.synapses[connection] = syn
 
     def _create_poisson_inputs(self):

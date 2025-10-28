@@ -2,16 +2,16 @@ from brian2 import *
 import pandas as pd
 from collections import defaultdict
 
-conn_df = pd.read_csv('scaled_matrix_0_to_0.34.csv', index_col=0, skipinitialspace=True)
+conn_df = pd.read_csv('conn_prob.csv', index_col=0, skipinitialspace=True)
 
-conductances = pd.read_csv('conductance_scaled_realistic.csv', index_col=0, skipinitialspace=True)*0.5
+conductances = pd.read_csv('conductances.csv', index_col=0, skipinitialspace=True)*0.5
 
 
 _LAYER_CONFIGS = {
     'L1': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 15*Hz, 
+        'input_rate': 13*Hz, 
         'neuron_counts': {
             'E': 8,
             'PV': 1,
@@ -23,54 +23,79 @@ _LAYER_CONFIGS = {
             'PV': {'target': 'gE', 'weight': 'EXT', 'N': 3},  
             'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 3},
             'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 25},
+        },
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (1.1, 1.35),
         }
     },
     'L23': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 12*Hz, 
+        'input_rate': 10*Hz, 
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
         'poisson_inputs': {
             'E':  {'target': 'gE',  'weight': 'EXT', 'N': 80},  
             'PV': {'target': 'gE',  'weight': 'EXT', 'N': 35},  
             'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 35},
             'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 20},
+        },
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (0.4, 1.1),
         }
     },
     'L4': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 15*Hz, 
+        'input_rate': 13*Hz, 
         'neuron_counts': {'E': 5760, 'PV': 950, 'SOM': 420, 'VIP': 70},
         'poisson_inputs': {
             'E':  {'target': 'gE',  'weight': 'EXT', 'N': 100}, 
             'PV': {'target': 'gE',  'weight': 'EXT', 'N': 40},  
             'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 40},
             'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 30},  
+        },
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (-0.3, 0.4),
         }
     },
     'L5': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 12*Hz,  
+        'input_rate': 10*Hz,  
         'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},
         'poisson_inputs': {
             'E':  {'target': 'gE',  'weight': 'EXT', 'N': 80}, 
             'PV': {'target': 'gE',  'weight': 'EXT', 'N': 25},  
             'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 25},
             'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 25},
+        },
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (-0.6, -0.3),
         }
     },
     'L6': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 15*Hz, 
+        'input_rate': 12*Hz, 
         'neuron_counts': {'E': 2040, 'PV': 187, 'SOM': 137, 'VIP': 36},
         'poisson_inputs': {
             'E':  {'target': 'gE',  'weight': 'EXT', 'N': 50}, 
             'PV': {'target': 'gE',  'weight': 'EXT', 'N': 20},  
             'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 20},
             'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 15},
+        },
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (-1.0, -0.6),
         }
     }
 }

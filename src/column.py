@@ -4,6 +4,7 @@ Column class implementation
 import brian2 as b2
 from brian2 import *
 from .layer import CorticalLayer
+from cleo import ephys
 
 class CorticalColumn:
     """
@@ -16,6 +17,7 @@ class CorticalColumn:
         if config is None:
             raise ValueError("CorticalColumn requires a config dictionary. Pass CONFIG from config module.")
         self.config = config
+        self.electrode = None
         self.layers = {}
         self.inter_layer_synapses = {}
         
@@ -23,6 +25,20 @@ class CorticalColumn:
         self._create_inter_layer_connections()
         self.network = Network()
         self._assemble_network()
+        self._insert_electrode()
+
+    def _insert_electrode(self):
+        array_length = 2.25 * b2.mm  # 15 intervals × 150um, from the data
+        channel_count = 16
+
+        coords = ephys.linear_shank_coords(
+            array_length, 
+            channel_count=16,
+            start_location=(0, 0, -0.9) * b2.mm  
+        )
+
+        probe = ephys.Probe(coords, save_history=True)
+        self.electrode = probe
     
     def _assemble_network(self):
         """Collect all components into the network"""
