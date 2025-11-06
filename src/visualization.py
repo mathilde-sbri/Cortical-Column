@@ -56,7 +56,7 @@ def plot_raster(spike_monitors, layer_configs, figsize=(15, 10)):
                         monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
                         color='gold', s=0.5, alpha=0.8, label="VIP")
         
-        ax.set_xlim(0.8, 1.6)
+        ax.set_xlim(0.0, 0.5)
         ax.set_ylabel('Neuron index')
         ax.set_title(f'{layer_name} Spike Raster Plot')
         ax.legend()
@@ -80,7 +80,7 @@ def plot_lfp(state_monitors, layer_configs, figsize=(15, 12)):
             ax.set_xlabel('Time (ms)')
             ax.set_ylabel('LFP (norm)')
             ax.set_title(f'{layer_name} Local Field Potential')
-            ax.set_xlim(800, 1600)
+            ax.set_xlim(0, 1000)
             ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -147,7 +147,7 @@ def plot_rate(rate_monitors, layer_configs, figsize=(10, 12)):
                 r = mon.smooth_rate(window='flat', width=10.1*ms) / Hz
 
                 ax.plot(t, r, label=pop_key)
-                ax.set_xlim(800, 1600)
+                ax.set_xlim(0, 1000)
                 #ax.set_ylim(0, 50)
                 plotted_any = True
             except Exception as e:

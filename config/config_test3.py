@@ -4,7 +4,7 @@ from collections import defaultdict
 
 conn_df = pd.read_csv('conn_prob.csv', index_col=0, skipinitialspace=True)
 
-conductances = pd.read_csv('conductances.csv', index_col=0, skipinitialspace=True)*0.5
+conductances = pd.read_csv('conductances.csv', index_col=0, skipinitialspace=True)
 
 
 _LAYER_CONFIGS = {
@@ -33,13 +33,13 @@ _LAYER_CONFIGS = {
     'L23': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 12*Hz, 
+        'input_rate': 7*Hz, 
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
         'poisson_inputs': {
-            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 80},  
-            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 35},  
-            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 35},
-            'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 20},
+            'E':   {'target': 'gE', 'weight': 'EXT', 'N': 1400},
+            # 'PV':  {'target': 'gE', 'weight': 'EXT', 'N':  800},
+            # 'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 250},
+            # 'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 1250},
         },
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -50,13 +50,13 @@ _LAYER_CONFIGS = {
     'L4': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 8*Hz, 
+        'input_rate': 12*Hz, 
         'neuron_counts': {'E': 5760, 'PV': 950, 'SOM': 420, 'VIP': 70},
         'poisson_inputs': {
-            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 100}, 
-            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 40},  
-            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 40},
-            'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 30},  
+            'E':   {'target': 'gE', 'weight': 'EXT', 'N': 2500},
+            # 'PV':  {'target': 'gE', 'weight': 'EXT', 'N': 1200},
+            # 'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 400},
+            # 'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 300},
         },
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -67,13 +67,13 @@ _LAYER_CONFIGS = {
     'L5': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 12*Hz,  
+        'input_rate': 7*Hz,  
         'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},
         'poisson_inputs': {
-            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 80}, 
-            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 25},  
-            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 25},
-            'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 25},
+            'E':   {'target': 'gE', 'weight': 'EXT', 'N': 1600},
+            # 'PV':  {'target': 'gE', 'weight': 'EXT', 'N':  800},
+            # 'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 500},
+            # 'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 1500},
         },
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -84,14 +84,15 @@ _LAYER_CONFIGS = {
     'L6': {
         'connection_prob': {},
         'conductance': {},
-        'input_rate': 15*Hz, 
+        'input_rate': 7*Hz, 
         'neuron_counts': {'E': 2040, 'PV': 187, 'SOM': 137, 'VIP': 36},
         'poisson_inputs': {
-            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 50}, 
-            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 20},  
-            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 20},
-            'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 15},
+            'E':   {'target': 'gE', 'weight': 'EXT', 'N': 1800},
+            # 'PV':  {'target': 'gE', 'weight': 'EXT', 'N':  900},
+            # 'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 350},
+            # 'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 1350},
         },
+
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),
@@ -99,6 +100,15 @@ _LAYER_CONFIGS = {
         }
     }
 }
+# def scale_N(layer_name, factor):
+#     for pop in ['E', 'PV', 'SOM', 'VIP']:
+#         _LAYER_CONFIGS[layer_name]['poisson_inputs'][pop]['N'] = int(
+#             _LAYER_CONFIGS[layer_name]['poisson_inputs'][pop]['N'] * factor
+#         )
+
+# for lay in ['L23', 'L4', 'L5', 'L6']:
+#     scale_N(lay, 0.75)
+
 
 _layer_csv = {
     'L1': {'VIP_row': 'i1Htr3a',
@@ -146,11 +156,10 @@ for src in _layers:
                 col  = f'{dst_pop}_col'
                 if src == dst:
                     _LAYER_CONFIGS[src].setdefault('connection_prob', {})[conn] = _prob(s[row], t[col])
-                    _LAYER_CONFIGS[src].setdefault('conductance', {})[conn] = _cond(s[row], t[col])/2
+                    _LAYER_CONFIGS[src].setdefault('conductance', {})[conn] = _cond(s[row], t[col])
                 else:
                     _INTER_LAYER_CONNECTIONS[(src, dst)][conn]  = _prob(s[row], t[col])
-                    _INTER_LAYER_CONDUCTANCES[(src, dst)][conn] = _cond(s[row], t[col])/2
-
+                    _INTER_LAYER_CONDUCTANCES[(src, dst)][conn] = _cond(s[row], t[col])
 
 
 for layer in ['L23', 'L4', 'L5', 'L6']:
@@ -158,11 +167,11 @@ for layer in ['L23', 'L4', 'L5', 'L6']:
     
     for conn_type in cfg['conductance'].keys():
         if 'PV' in conn_type.split('_')[0]: 
-            cfg['conductance'][conn_type] *= 1.5
+            cfg['conductance'][conn_type] *= 1.9
         if 'SOM' in conn_type.split('_')[0]: 
-            cfg['conductance'][conn_type] *= 1.3
+            cfg['conductance'][conn_type] *= 1.9
         if 'VIP' in conn_type.split('_')[0]: 
-            cfg['conductance'][conn_type] *= 1.4
+            cfg['conductance'][conn_type] *= 1.9
 
 for (src, dst), conductances in _INTER_LAYER_CONDUCTANCES.items():
     for conn_type in conductances.keys():
@@ -341,7 +350,7 @@ CONFIG = {
     },
     'synapses': {
         'Q': {
-            'EXT': 0.8*nS,
+            'EXT': 0.015*nS,
         },
     },
     

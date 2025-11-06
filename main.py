@@ -2,7 +2,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 from brian2tools import *
-from config.config_test import CONFIG
+from config.config_test3 import CONFIG
 from src.column import CorticalColumn
 from src.visualization import *
 from src.analysis import *
@@ -22,57 +22,57 @@ def main():
     
     all_monitors = column.get_all_monitors()
     
-    column.network.run(1000*ms)
+    column.network.run(500*ms)
 
-    ############## CREATING STIM INPUT ##############
-    w_ext = CONFIG['synapses']['Q']['EXT']
+    # ############## CREATING STIM INPUT ##############
+    # w_ext = CONFIG['synapses']['Q']['EXT']
     
 
-    L4 = column.layers['L4']
-    cfg_L4 = CONFIG['layers']['L4']
+    # L4 = column.layers['L4']
+    # cfg_L4 = CONFIG['layers']['L4']
     
-    L4_E_grp = L4.neuron_groups['E']
-
-    
-    N_stim_E = int(cfg_L4['poisson_inputs']['E']['N'] * 2)
-    stim_rate_E = 8*Hz  
-
+    # L4_E_grp = L4.neuron_groups['E']
 
     
-    L4_E_stim = PoissonInput(L4_E_grp, 'gE', 
-                             N=N_stim_E, rate=stim_rate_E, weight=w_ext)
+    # N_stim_E = int(cfg_L4['poisson_inputs']['E']['N'] /2)
+    # stim_rate_E = 8*Hz  
+
+
     
-    L4_PV_grp = L4.neuron_groups['PV']
-    N_stim_PV = int(cfg_L4['poisson_inputs']['PV']['N'] * 1.5)
-    stim_rate_PV = 6*Hz
+    # L4_E_stim = PoissonInput(L4_E_grp, 'gE', 
+    #                          N=N_stim_E, rate=stim_rate_E, weight=w_ext)
     
-    L4_PV_stim = PoissonInput(L4_PV_grp, 'gE', 
-                              N=N_stim_PV, rate=stim_rate_PV, weight=w_ext)
+    # L4_PV_grp = L4.neuron_groups['PV']
+    # N_stim_PV = int(cfg_L4['poisson_inputs']['PV']['N']/2)
+    # stim_rate_PV = 6*Hz
     
-    # L6 receives weaker but concurrent thalamic input
-    L6 = column.layers['L6']
-    cfg_L6 = CONFIG['layers']['L6']
+    # L4_PV_stim = PoissonInput(L4_PV_grp, 'gE', 
+    #                           N=N_stim_PV, rate=stim_rate_PV, weight=w_ext)
     
-    L6_E_grp = L6.neuron_groups['E']
+    # # L6 receives weaker but concurrent thalamic input
+    # L6 = column.layers['L6']
+    # cfg_L6 = CONFIG['layers']['L6']
     
-    N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'] * 1.3)
-    stim_rate_L6_E = 6*Hz
+    # L6_E_grp = L6.neuron_groups['E']
     
-    L6_E_stim = PoissonInput(L6_E_grp, 'gE',
-                             N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext)
+    # N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'] )
+    # stim_rate_L6_E = 6*Hz
     
-    N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'] * 1.2)
-    stim_rate_L6_PV = 4*Hz
+    # L6_E_stim = PoissonInput(L6_E_grp, 'gE',
+    #                          N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext)
     
-    L6_PV_stim = PoissonInput(L6.neuron_groups['PV'], 'gE',
-                              N=N_stim_L6_PV, rate=stim_rate_L6_PV, weight=w_ext)
+    # N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'] )
+    # stim_rate_L6_PV = 4*Hz
     
-    column.network.add(L4_E_stim, L4_PV_stim, L6_E_stim, L6_PV_stim)
+    # L6_PV_stim = PoissonInput(L6.neuron_groups['PV'], 'gE',
+    #                           N=N_stim_L6_PV, rate=stim_rate_L6_PV, weight=w_ext)
+    
+    # column.network.add(L4_E_stim, L4_PV_stim, L6_E_stim, L6_PV_stim)
 
     #################################################
 
 
-    column.network.run(3000*ms)
+    # column.network.run(500*ms)
 
     print("Simulation complete")
     

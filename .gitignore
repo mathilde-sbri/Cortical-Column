@@ -3,3 +3,6 @@
 *.pyc
 first_sim.py
 /bazar
+/results
+/test_trials
+/full_trials

@@ -120,19 +120,51 @@ class CorticalLayer:
             return f"{var}_post += {val}*nS"
 
 
+    # def _create_internal_connections(self):
+    #     pmap = self.layer_config.get('connection_prob', {})
+    #     cmap =self.layer_config.get('conductance', {})
+    #     for connection, p in pmap.items():
+    #         pre, post = connection.split('_')
+    #         if pre not in self.neuron_groups or post not in self.neuron_groups:
+    #             continue
+    #         excitatory = (pre == 'E')
+    #         syn = Synapses(
+    #             self.neuron_groups[pre], self.neuron_groups[post],
+    #             on_pre=self._on_pre(connection, cmap[connection], excitatory=excitatory)
+    #         )
+    #         syn.connect(p=float(p))
+    #         self.synapses[connection] = syn
+
     def _create_internal_connections(self):
         pmap = self.layer_config.get('connection_prob', {})
-        cmap =self.layer_config.get('conductance', {})
+        cmap = self.layer_config.get('conductance', {})
+        
         for connection, p in pmap.items():
             pre, post = connection.split('_')
             if pre not in self.neuron_groups or post not in self.neuron_groups:
                 continue
+            
             excitatory = (pre == 'E')
+            
+            if pre == post:  
+                delay_mean = 0.8*ms
+                delay_std = 0.5*ms
+            elif excitatory: 
+                delay_mean = 0.6*ms
+                delay_std = 0.4*ms
+            else:  
+                delay_mean = 0.5*ms
+                delay_std = 0.3*ms
+            
             syn = Synapses(
-                self.neuron_groups[pre], self.neuron_groups[post],
+                self.neuron_groups[pre], 
+                self.neuron_groups[post],
                 on_pre=self._on_pre(connection, cmap[connection], excitatory=excitatory)
             )
             syn.connect(p=float(p))
+            
+            syn.delay = f'{delay_mean/ms}*ms + clip(randn()*{delay_std/ms}, -{delay_std/ms}*0.5, {delay_std/ms}*2)*ms'
+            
             self.synapses[connection] = syn
 
     def _create_poisson_inputs(self):
@@ -160,7 +192,7 @@ class CorticalLayer:
 
     def _create_monitors(self):
         for pop_name, group in self.neuron_groups.items():
-            vars_to_record = ['v', 'gE', 'gI'] if not self.is_current else ['v', 'sE', 'sI']
+            vars_to_record = ['v', 'gE', 'gI','IsynE', 'IsynIPV', 'IsynISOM', 'IsynIVIP', 'IsynI'] if not self.is_current else ['v', 'sE', 'sI']
             self.monitors[f'{pop_name}_state'] = StateMonitor(group, vars_to_record, record=True)
             self.monitors[f'{pop_name}_spikes'] = SpikeMonitor(group, variables='t')
             self.monitors[f'{pop_name}_rate']   = PopulationRateMonitor(group)

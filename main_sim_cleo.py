@@ -10,6 +10,8 @@ from src.analysis import *
 from src.cleo_plots import *
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
 
 def _existing_syn(layer, pre, post):
 
@@ -32,6 +34,16 @@ def _existing_syn(layer, pre, post):
 
 
 def main():
+
+    c = {
+        "light": "#df87e1",
+        "main": "#C500CC",
+        "dark": "#8000B4",
+        "exc": "#d6755e",
+        "inh": "#056eee",
+        "accent": "#36827F",
+    }
+    
     np.random.seed(CONFIG['simulation']['RANDOM_SEED'])
     b2.start_scope()
     b2.defaultclock.dt = CONFIG['simulation']['DT']
@@ -53,26 +65,33 @@ def main():
     sim = cleo.CLSimulator(column.network)
     
     
-    tklfp = ephys.TKLFPSignal()
-    mua = ephys.MultiUnitActivity()
+    
+    rwslfp = ephys.RWSLFPSignalFromPSCs()
+    mua = ephys.MultiUnitActivity(threshold_sigma=4.5)
     ss = ephys.SortedSpiking()
     probe = column.electrode
     sim.set_io_processor(cleo.ioproc.RecordOnlyProcessor(sample_period=1 * b2.ms))
-    probe.add_signals(mua, ss, tklfp)
+    probe.add_signals(mua, ss, rwslfp)
 
     for layer_name, layer in column.layers.items():
         if layer_name != 'L1':
-            for pop_name, group in layer.neuron_groups.items():
-                cell_type = "exc" if pop_name == "E" else "inh"
-                sim.inject(
-                    probe,
-                    group,
-                    tklfp_type=cell_type,
-                    ampa_syns=[layer.synapses['E_'+pop_name]], 
-                    gaba_syns=[layer.synapses['PV_'+pop_name],
-                            layer.synapses['SOM_'+pop_name],
-                            layer.synapses['VIP_'+pop_name]]
-                )
+            group = layer.neuron_groups['E']
+            sim.inject(
+                probe, group,
+                Iampa_var_names=['IsynE'],
+                Igaba_var_names=['IsynI'] 
+            )
+            # sim.inject(
+            #     probe,  
+            #     group, 
+            #     tklfp_type="exc",
+            #     ampa_syns=[layer.synapses['E_E']], 
+            #     gaba_syns=[
+            #         layer.synapses['PV_E'],
+            #         layer.synapses['SOM_E'],
+            #         layer.synapses['VIP_E']
+            #     ]
+            # )
 
 
 
@@ -95,8 +114,8 @@ def main():
     L4_E_grp = L4.neuron_groups['E']
 
     
-    N_stim_E = int(cfg_L4['poisson_inputs']['E']['N'])
-    stim_rate_E = 10*Hz  
+    N_stim_E = int(cfg_L4['poisson_inputs']['E']['N']/2)
+    stim_rate_E = 8*Hz  
 
 
     
@@ -104,26 +123,25 @@ def main():
                              N=N_stim_E, rate=stim_rate_E, weight=w_ext)
     
     L4_PV_grp = L4.neuron_groups['PV']
-    N_stim_PV = int(cfg_L4['poisson_inputs']['PV']['N'])
-    stim_rate_PV = 8*Hz
+    N_stim_PV = int(cfg_L4['poisson_inputs']['PV']['N']/2)
+    stim_rate_PV = 6*Hz
     
     L4_PV_stim = PoissonInput(L4_PV_grp, 'gE', 
                               N=N_stim_PV, rate=stim_rate_PV, weight=w_ext)
     
-    # L6 receives weaker but concurrent thalamic input
     L6 = column.layers['L6']
     cfg_L6 = CONFIG['layers']['L6']
     
     L6_E_grp = L6.neuron_groups['E']
     
     N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'])
-    stim_rate_L6_E = 8*Hz
+    stim_rate_L6_E = 6*Hz
     
     L6_E_stim = PoissonInput(L6_E_grp, 'gE',
                              N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext)
     
     N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'])
-    stim_rate_L6_PV = 6*Hz
+    stim_rate_L6_PV = 4*Hz
     
     L6_PV_stim = PoissonInput(L6.neuron_groups['PV'], 'gE',
                               N=N_stim_L6_PV, rate=stim_rate_L6_PV, weight=w_ext)
@@ -155,7 +173,7 @@ def main():
 
     fig, ax = plt.subplots(1, 1, figsize=(6, 7), sharey=False, layout="constrained")
 
-    lfp = tklfp.lfp / b2.uvolt
+    lfp = rwslfp.lfp 
     channel_offsets = -np.abs(np.quantile(lfp, 0.9)) * np.arange(probe.n)
     lfp2plot = lfp + channel_offsets
     ax.plot(lfp2plot, color="white", lw=1)
@@ -182,20 +200,25 @@ def main():
         yticklabels=range(1, 17),
     )
 
+    
 
     # fig_laminar, axes_laminar, psth, lfp_bipolar = analyze_and_plot_laminar_recording(
     #     sim, column, probe, tklfp, ss,
     #     stim_onset_time=500*b2.ms  
     # )
 
-    fig_laminar, axes_laminar, psth, lfp_bipolar = analyze_and_plot_laminar_recording_mua(
-        sim, column, probe, tklfp, mua,
-        stim_onset_time=500*b2.ms  # or whatever your stimulus time is
+        
+    results = analyze_and_plot_laminar_recording_mua(
+        sim, column, probe, rwslfp, mua,
+        stim_onset_time=500*b2.ms, plot=plot
     )
-
+    fig_laminar, axes_laminar, psth, lfp = results['fig'], results['axes'], results['psth'], results['lfp']
 
     
 
+
+    fig_lfp_layers_mono = results['fig_lfp_layers_mono']
+    fig_lfp_layers_bip  = results['fig_lfp_layers_bip']
 
     
     plt.show()
