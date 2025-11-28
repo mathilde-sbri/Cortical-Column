@@ -3,9 +3,217 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
 from collections import defaultdict
-from src.superlet import superlets
+
+# Import your analysis functions
+from src.analysis import calculate_lfp_kernel_method, compute_csd_from_lfp, compute_bipolar_lfp
+from config.config_test2 import CONFIG
+
+# Superlets (optional)
+try:
+    from superlets import superlets
+except ImportError:
+    print("WARNING: superlets not installed. Install with: pip install superlets")
+    superlets = None
 
 
+def process_raw_trials_batch(
+    raw_data_dir="results/lfp_trials_conditions",
+    output_dir="results/lfp_trials_processed",
+    config=None,
+    fs=10000,
+    electrode_positions=None,
+    verbose=True,
+):
+    """
+    Batch process all raw trial data to compute LFP, CSD, bipolar, etc.
+    """
+    
+    if electrode_positions is None:
+        electrode_positions = [
+            (0, 0, -0.94), (0, 0, -0.79), (0, 0, -0.64), (0, 0, -0.49),
+            (0, 0, -0.34), (0, 0, -0.19), (0, 0, -0.04), (0, 0, 0.10),
+            (0, 0, 0.26), (0, 0, 0.40), (0, 0, 0.56), (0, 0, 0.70),
+            (0, 0, 0.86), (0, 0, 1.00), (0, 0, 1.16), (0, 0, 1.30),
+        ]
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Get all raw trial files
+    raw_files = sorted([f for f in os.listdir(raw_data_dir) if f.endswith('_raw.npz')])
+    
+    if verbose:
+        print(f"\n=== Batch processing {len(raw_files)} trials ===\n")
+    
+    for idx, raw_file in enumerate(raw_files):
+        raw_path = os.path.join(raw_data_dir, raw_file)
+        
+        if verbose:
+            print(f"[{idx+1}/{len(raw_files)}] Processing {raw_file}...")
+        
+        # Load raw data
+        raw_data = np.load(raw_path, allow_pickle=True)
+        
+        trial_id = int(raw_data['trial_id'])
+        spike_data = raw_data['spike_data'].item()
+        neuron_group_info = raw_data['neuron_group_info'].item()
+        actual_baseline_ms = float(raw_data['actual_baseline_ms'])
+        post_ms = float(raw_data['post_ms'])
+        total_sim_ms = actual_baseline_ms + post_ms
+        
+        # Reconstruct spike monitors format for LFP calculation
+        # Create mock spike monitor objects that mimic Brian2 SpikeMonitor interface
+        class MockSpikeMonitor:
+            """Mock Brian2 SpikeMonitor for LFP calculation"""
+            def __init__(self, spike_indices, spike_times_ms):
+                self.i = spike_indices
+                # Store times in ms as array, calculate_lfp_kernel_method will convert
+                self._t_ms = spike_times_ms
+                
+            @property
+            def t(self):
+                # Return a mock object that supports division
+                class MockTime:
+                    def __init__(self, t_ms):
+                        self._t_ms = t_ms
+                    def __truediv__(self, unit):
+                        # When divided by ms, return the time in ms
+                        return self._t_ms
+                return MockTime(self._t_ms)
+        
+        class MockNeuronGroup:
+            """Mock Brian2 NeuronGroup for LFP calculation"""
+            def __init__(self, N, x_vals, y_vals, z_vals):
+                self.N = N
+                self._x = x_vals
+                self._y = y_vals
+                self._z = z_vals
+            
+            @property
+            def x(self):
+                class MockPosition:
+                    def __init__(self, vals):
+                        self._vals = vals
+                    def __truediv__(self, unit):
+                        # When divided by mm or meter, return the values
+                        return self._vals
+                    def __len__(self):
+                        return len(self._vals)
+                return MockPosition(self._x)
+            
+            @property
+            def y(self):
+                class MockPosition:
+                    def __init__(self, vals):
+                        self._vals = vals
+                    def __truediv__(self, unit):
+                        return self._vals
+                    def __len__(self):
+                        return len(self._vals)
+                return MockPosition(self._y)
+            
+            @property
+            def z(self):
+                class MockPosition:
+                    def __init__(self, vals):
+                        self._vals = vals
+                    def __truediv__(self, unit):
+                        return self._vals
+                    def __len__(self):
+                        return len(self._vals)
+                return MockPosition(self._z)
+        
+        spike_monitors = {}
+        neuron_groups = {}
+        
+        for layer_name in spike_data.keys():
+            spike_monitors[layer_name] = {}
+            for mon_name, mon_data in spike_data[layer_name].items():
+                spike_monitors[layer_name][mon_name] = MockSpikeMonitor(
+                    mon_data['i'], 
+                    mon_data['t']
+                )
+            
+            # Create mock neuron groups
+            neuron_groups[layer_name] = {}
+            for pop_name, ng_data in neuron_group_info[layer_name].items():
+                neuron_groups[layer_name][pop_name] = MockNeuronGroup(
+                    ng_data['N'],
+                    ng_data['x'],
+                    ng_data['y'],
+                    ng_data['z']
+                )
+        
+        # Compute LFP
+        if verbose:
+            print("  Computing LFP...")
+        
+        lfp_signals, time_array = calculate_lfp_kernel_method(
+            spike_monitors,
+            neuron_groups,
+            config['layers'],
+            electrode_positions,
+            fs=fs,
+            sim_duration_ms=total_sim_ms,
+        )
+        
+        # Compute CSD
+        if verbose:
+            print("  Computing CSD...")
+        
+        csd, csd_depths, csd_sort_idx = compute_csd_from_lfp(
+            lfp_signals,
+            electrode_positions,
+            sigma=0.3,
+            vaknin=True,
+        )
+        
+        # Compute bipolar
+        if verbose:
+            print("  Computing bipolar LFP...")
+        
+        bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
+            lfp_signals,
+            electrode_positions,
+        )
+        
+        # Pack processed data
+        n_elec = len(lfp_signals)
+        lfp_matrix = np.vstack([lfp_signals[i] for i in range(n_elec)])
+        bipolar_matrix = np.vstack([bipolar_signals[i] for i in range(len(bipolar_signals))])
+        
+        processed_data = {
+            "trial_id": trial_id,
+            "seed": int(raw_data['seed']),
+            "condition_name": str(raw_data['condition_name']),
+            "stim_rate_multiplier": float(raw_data['stim_rate_multiplier']),
+            "stim_n_multiplier": float(raw_data['stim_n_multiplier']),
+            "time_array_ms": np.array(time_array),
+            "electrode_positions": np.array(electrode_positions),
+            "lfp_matrix": lfp_matrix,
+            "bipolar_matrix": bipolar_matrix,
+            "csd": np.array(csd),
+            "csd_depths": np.array(csd_depths),
+            "csd_sort_idx": np.array(csd_sort_idx),
+            "channel_labels": np.array(channel_labels, dtype=object),
+            "channel_depths": np.array(channel_depths),
+            "rate_data": raw_data['rate_data'].item(),
+            "baseline_ms": float(raw_data['baseline_ms']),
+            "actual_baseline_ms": actual_baseline_ms,
+            "post_ms": post_ms,
+            "stim_onset_ms": float(raw_data['stim_onset_ms']),
+            "stim_params": raw_data['stim_params'].item(),
+        }
+        
+        # Save processed data
+        output_file = raw_file.replace('_raw.npz', '_processed.npz')
+        output_path = os.path.join(output_dir, output_file)
+        np.savez_compressed(output_path, **processed_data)
+        
+        if verbose:
+            print(f"  Saved to {output_path}\n")
+    
+    if verbose:
+        print("=== Batch processing complete ===\n")
 
 
 def load_trials_by_condition(processed_dir="results/lfp_trials_processed"):
@@ -129,23 +337,12 @@ def compute_power_spectra(
     bipolar_lfps,
     time_s,
     stim_onset_s,
-    pre_window=(-0.2, -0.01),   # Relative to stimulus (200ms before to 10ms before)
-    post_window=(0.01, 0.2),     # Relative to stimulus (10ms after to 200ms after)
+    pre_window=(-0.2, -0.01),   # Relative to stimulus
+    post_window=(0.01, 0.2),     # Relative to stimulus
     nperseg=256,
 ):
     """
     Compute power spectra before and after stimulus for each channel.
-    
-    Parameters:
-        bipolar_lfps : np.array, shape (n_trials, n_channels, n_time)
-        time_s : np.array, time in seconds
-        stim_onset_s : float, stimulus onset time in seconds
-        pre_window : tuple, time window before stimulus (relative to onset)
-        post_window : tuple, time window after stimulus (relative to onset)
-        nperseg : int, segment length for Welch's method
-    
-    Returns:
-        dict with 'freqs', 'pre_power', 'post_power', 'pre_sem', 'post_sem'
     """
     n_trials, n_channels, n_time = bipolar_lfps.shape
     
@@ -159,7 +356,7 @@ def compute_power_spectra(
                 (time_s <= (stim_onset_s + post_window[1])))
     
     # Storage for all trials
-    pre_psds = []   # List of (n_channels, n_freqs) arrays
+    pre_psds = []
     post_psds = []
     
     print(f"Computing power spectra for {n_channels} channels, {n_trials} trials...")
@@ -192,7 +389,7 @@ def compute_power_spectra(
     post_psds = np.array(post_psds)
     
     # Compute mean and SEM across trials
-    pre_power_mean = pre_psds.mean(axis=0)  # (n_channels, n_freqs)
+    pre_power_mean = pre_psds.mean(axis=0)
     post_power_mean = post_psds.mean(axis=0)
     
     pre_power_sem = pre_psds.std(axis=0) / np.sqrt(n_trials)
@@ -347,11 +544,11 @@ def analyze_all_conditions(
             time_arrays.append(trial['time_array_ms'])
             stim_onsets.append(trial['stim_onset_ms'])
         
-        # Use first trial's time array (should be same for all)
+        # Use first trial's time array
         time_ms = time_arrays[0]
         time_s = time_ms / 1000.0
         
-        # Average stimulus onset (should be similar with small jitter)
+        # Average stimulus onset
         stim_onset_s = np.mean(stim_onsets) / 1000.0
         
         # Stack: (n_trials, n_channels, n_time)
@@ -432,14 +629,29 @@ def analyze_all_conditions(
 
 
 if __name__ == "__main__":
-    # Run analysis on all processed trials, grouped by condition
+    print("="*60)
+    print("STEP 1: Processing raw trials to compute LFP/bipolar")
+    print("="*60)
+    
+    process_raw_trials_batch(
+        raw_data_dir="results/lfp_trials_conditions",
+        output_dir="results/lfp_trials_processed",
+        config=CONFIG,
+        fs=10000,
+        verbose=True,
+    )
+    
+    print("\n" + "="*60)
+    print("STEP 2: Analyzing all conditions")
+    print("="*60)
+    
     analyze_all_conditions(
         processed_dir="results/lfp_trials_processed",
         output_dir="results/analysis_by_condition",
         foi=np.arange(1, 120, 1),
-        baseline_window=(0.85, 0.99),    # 150ms before stimulus
-        analysis_window=(0.95, 1.3),      # 50ms before to 300ms after stimulus
-        pre_window=(-0.2, -0.01),         # 200ms to 10ms before stimulus
-        post_window=(0.01, 0.2),          # 10ms to 200ms after stimulus
+        baseline_window=(0.85, 0.99),
+        analysis_window=(0.95, 1.3),
+        pre_window=(-0.2, -0.01),
+        post_window=(0.01, 0.2),
         verbose=True,
     )
