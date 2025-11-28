@@ -1,191 +1,445 @@
+import os
 import numpy as np
-import brian2 as b2
-from brian2 import *
-from brian2tools import *
-from config.config_test import CONFIG
-from src.column import CorticalColumn
-from src.visualization import *
-from src.analysis import *
+import matplotlib.pyplot as plt
+from scipy import signal
+from collections import defaultdict
+from src.superlet import superlets
 
-class LFPRecorder:
-    """
-    Records Local Field Potential based on Mazzoni et al. (2008)
-    LFP = sum of |I_AMPA| + |I_GABA| from pyramidal (E) neurons
-    """
-    def __init__(self, layer, dt=0.1*ms):
-        self.layer = layer
-        self.dt = dt
-        self.E_group = layer.neuron_groups.get('E')
-        
-        if self.E_group is None:
-            raise ValueError(f"No excitatory neurons found in layer {layer.name}")
-        
-        # We'll compute LFP by monitoring synaptic currents
-        # The LFP is approximated as sum of |I_E| + |I_I| across all E neurons
-        self.lfp_values = []
-        self.times = []
-        
-    def record_lfp(self, state_monitor):
-        """
-        Compute LFP from state monitor data
-        state_monitor should have recorded IsynE and IsynI (or gE, gI)
-        """
-        # Get the synaptic currents for all E neurons
-        if hasattr(state_monitor, 'IsynE'):
-            # Direct current recording
-            I_E = np.abs(state_monitor.IsynE / pA)  # Convert to pA and take absolute
-            I_I_PV = np.abs(state_monitor.IsynIPV / pA)
-            I_I_SOM = np.abs(state_monitor.IsynISOM / pA)
-            I_I_VIP = np.abs(state_monitor.IsynIVIP / pA)
-            I_I = I_I_PV + I_I_SOM + I_I_VIP
-        else:
-            # Reconstruct from conductances if currents not directly available
-            # This won't work perfectly but is an approximation
-            print("Warning: Using conductance approximation for LFP")
-            I_E = np.abs(state_monitor.gE / nS)
-            I_I = np.abs(state_monitor.gI / nS)
-        
-        # Sum across all pyramidal neurons to get population LFP
-        # Shape: (n_neurons, n_timepoints) -> (n_timepoints,)
-        lfp = np.sum(I_E, axis=0) + np.sum(I_I, axis=0)
-        
-        return lfp, state_monitor.t / ms
 
-def compute_layer_lfps(column, all_monitors):
+
+
+def load_trials_by_condition(processed_dir="results/lfp_trials_processed"):
     """
-    Compute LFP for each layer in the column
-    Returns dict of {layer_name: (lfp_signal, times)}
-    """
-    layer_lfps = {}
+    Load all processed trial files and group them by condition.
     
-    for layer_name, monitors in all_monitors.items():
-        # Get the E population state monitor
-        e_state_key = [k for k in monitors.keys() if 'E_state' in k]
+    Returns:
+        dict: {condition_name: list of trial data dicts}
+    """
+    trials_by_condition = defaultdict(list)
+    
+    processed_files = sorted([f for f in os.listdir(processed_dir) 
+                             if f.endswith('_processed.npz')])
+    
+    print(f"Loading {len(processed_files)} processed trials...")
+    
+    for fname in processed_files:
+        fpath = os.path.join(processed_dir, fname)
+        data = np.load(fpath, allow_pickle=True)
         
-        if not e_state_key:
-            print(f"Warning: No E state monitor found for {layer_name}")
-            continue
+        condition = str(data['condition_name'])
+        trials_by_condition[condition].append({
+            'trial_id': int(data['trial_id']),
+            'condition_name': condition,
+            'stim_rate_multiplier': float(data['stim_rate_multiplier']),
+            'stim_n_multiplier': float(data['stim_n_multiplier']),
+            'time_array_ms': data['time_array_ms'],
+            'lfp_matrix': data['lfp_matrix'],
+            'bipolar_matrix': data['bipolar_matrix'],
+            'csd': data['csd'],
+            'stim_onset_ms': float(data['stim_onset_ms']),
+            'stim_params': data['stim_params'].item(),
+        })
+    
+    print(f"Found {len(trials_by_condition)} conditions:")
+    for cond, trials in trials_by_condition.items():
+        print(f"  {cond}: {len(trials)} trials")
+    
+    return trials_by_condition
+
+
+def compute_superlet_analysis(
+    bipolar_lfps,
+    time_s,
+    foi=None,
+    baseline_window=(0.85, 0.99),  # Pre-stimulus baseline
+    analysis_window=(0.95, 1.3),   # Around stimulus
+    c1=2,
+    ord=(1, 5),
+):
+    """
+    Compute superlet time-frequency analysis averaged across trials.
+    
+    Parameters:
+        bipolar_lfps : np.array, shape (n_trials, n_channels, n_time)
+        time_s : np.array, time in seconds
+        foi : frequencies of interest
+        baseline_window : tuple, (start, end) in seconds for baseline
+        analysis_window : tuple, (start, end) in seconds for analysis
+        c1 : superlet parameter
+        ord : superlet order range
+    
+    Returns:
+        S_mean : np.array, shape (n_channels, n_freqs, n_twin)
+        t_win : np.array, time points in analysis window
+        foi : np.array, frequencies
+    """
+    if superlets is None:
+        raise ImportError("superlets package not installed")
+    
+    if foi is None:
+        foi = np.arange(1, 120, 1)
+    
+    n_trials, n_channels, n_time = bipolar_lfps.shape
+    
+    dt = np.diff(time_s).mean()
+    fs = 1.0 / dt
+    
+    # Define windows
+    baseline_idx = (time_s >= baseline_window[0]) & (time_s <= baseline_window[1])
+    analysis_idx = (time_s >= analysis_window[0]) & (time_s <= analysis_window[1])
+    t_win = time_s[analysis_idx]
+    n_twin = analysis_idx.sum()
+    
+    # Accumulator for mean TF maps
+    S_mean = np.zeros((n_channels, len(foi), n_twin))
+    
+    print(f"Computing superlets for {n_channels} channels, {n_trials} trials...")
+    
+    for ch in range(n_channels):
+        acc = np.zeros((len(foi), n_twin))
+        
+        for tr in range(n_trials):
+            if tr % 5 == 0:
+                print(f"  Channel {ch+1}/{n_channels}, Trial {tr+1}/{n_trials}")
             
-        state_mon = monitors[e_state_key[0]]
+            signal_data = bipolar_lfps[tr, ch, :]
+            
+            # Compute superlet on full signal
+            S_full = superlets(signal_data, fs, foi, c1, ord)
+            
+            # Baseline normalization (z-score)
+            baseline_power = S_full[:, baseline_idx]
+            baseline_mean = baseline_power.mean(axis=1, keepdims=True)
+            baseline_std = baseline_power.std(axis=1, keepdims=True)
+            baseline_std[baseline_std == 0] = np.finfo(float).eps
+            
+            S_full_z = (S_full - baseline_mean) / baseline_std
+            
+            # Crop to analysis window
+            S_win = S_full_z[:, analysis_idx]
+            acc += S_win
         
-        # Create LFP recorder for this layer
-        layer = column.get_layer(layer_name)
-        recorder = LFPRecorder(layer)
-        
-        # Compute LFP
-        lfp, times = recorder.record_lfp(state_mon)
-        layer_lfps[layer_name] = (lfp, times)
-        
-        print(f"Computed LFP for {layer_name}: {len(lfp)} timepoints")
+        # Average over trials
+        S_mean[ch] = acc / n_trials
     
-    return layer_lfps
+    return S_mean, t_win, foi
 
-def plot_layer_lfps(layer_lfps, figsize=(15, 10)):
+
+def compute_power_spectra(
+    bipolar_lfps,
+    time_s,
+    stim_onset_s,
+    pre_window=(-0.2, -0.01),   # Relative to stimulus (200ms before to 10ms before)
+    post_window=(0.01, 0.2),     # Relative to stimulus (10ms after to 200ms after)
+    nperseg=256,
+):
     """
-    Plot LFPs from all layers
+    Compute power spectra before and after stimulus for each channel.
+    
+    Parameters:
+        bipolar_lfps : np.array, shape (n_trials, n_channels, n_time)
+        time_s : np.array, time in seconds
+        stim_onset_s : float, stimulus onset time in seconds
+        pre_window : tuple, time window before stimulus (relative to onset)
+        post_window : tuple, time window after stimulus (relative to onset)
+        nperseg : int, segment length for Welch's method
+    
+    Returns:
+        dict with 'freqs', 'pre_power', 'post_power', 'pre_sem', 'post_sem'
     """
-    n_layers = len(layer_lfps)
-    fig, axes = plt.subplots(n_layers, 1, figsize=figsize, sharex=True)
+    n_trials, n_channels, n_time = bipolar_lfps.shape
     
-    if n_layers == 1:
-        axes = [axes]
+    dt = np.diff(time_s).mean()
+    fs = 1.0 / dt
     
-    for idx, (layer_name, (lfp, times)) in enumerate(sorted(layer_lfps.items())):
-        ax = axes[idx]
-        
-        # High-pass filter at 1 Hz (as in the paper)
-        from scipy import signal
-        fs = 1000 / np.mean(np.diff(times))  # Sampling frequency in Hz
-        sos = signal.butter(4, 1, 'highpass', fs=fs, output='sos')
-        lfp_filtered = signal.sosfilt(sos, lfp)
-        
-        ax.plot(times, lfp_filtered, 'k', linewidth=0.5)
-        ax.set_ylabel(f'{layer_name}\nLFP (a.u.)', fontsize=10)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        
-        # Add scale bar
-        if idx == 0:
-            ax.set_title('Layer-wise Local Field Potentials', fontsize=12, fontweight='bold')
+    # Define time windows
+    pre_idx = ((time_s >= (stim_onset_s + pre_window[0])) & 
+               (time_s <= (stim_onset_s + pre_window[1])))
+    post_idx = ((time_s >= (stim_onset_s + post_window[0])) & 
+                (time_s <= (stim_onset_s + post_window[1])))
     
-    axes[-1].set_xlabel('Time (ms)', fontsize=10)
-    plt.tight_layout()
-    return fig
+    # Storage for all trials
+    pre_psds = []   # List of (n_channels, n_freqs) arrays
+    post_psds = []
+    
+    print(f"Computing power spectra for {n_channels} channels, {n_trials} trials...")
+    
+    for tr in range(n_trials):
+        if tr % 5 == 0:
+            print(f"  Trial {tr+1}/{n_trials}")
+        
+        pre_psd_trial = []
+        post_psd_trial = []
+        
+        for ch in range(n_channels):
+            signal_data = bipolar_lfps[tr, ch, :]
+            
+            # Pre-stimulus PSD
+            pre_signal = signal_data[pre_idx]
+            f_pre, psd_pre = signal.welch(pre_signal, fs=fs, nperseg=nperseg)
+            pre_psd_trial.append(psd_pre)
+            
+            # Post-stimulus PSD
+            post_signal = signal_data[post_idx]
+            f_post, psd_post = signal.welch(post_signal, fs=fs, nperseg=nperseg)
+            post_psd_trial.append(psd_post)
+        
+        pre_psds.append(np.array(pre_psd_trial))
+        post_psds.append(np.array(post_psd_trial))
+    
+    # Convert to arrays: (n_trials, n_channels, n_freqs)
+    pre_psds = np.array(pre_psds)
+    post_psds = np.array(post_psds)
+    
+    # Compute mean and SEM across trials
+    pre_power_mean = pre_psds.mean(axis=0)  # (n_channels, n_freqs)
+    post_power_mean = post_psds.mean(axis=0)
+    
+    pre_power_sem = pre_psds.std(axis=0) / np.sqrt(n_trials)
+    post_power_sem = post_psds.std(axis=0) / np.sqrt(n_trials)
+    
+    return {
+        'freqs': f_pre,
+        'pre_power': pre_power_mean,
+        'post_power': post_power_mean,
+        'pre_sem': pre_power_sem,
+        'post_sem': post_power_sem,
+    }
 
 
-def main():
-    np.random.seed(CONFIG['simulation']['RANDOM_SEED'])
-    b2.start_scope()
-    b2.defaultclock.dt = CONFIG['simulation']['DT']
+def plot_superlet_results(S_mean, t_win, foi, condition_name, save_path=None):
+    """
+    Plot superlet time-frequency maps for all channels.
+    """
+    n_channels = S_mean.shape[0]
+    n_rows = int(np.ceil(np.sqrt(n_channels)))
+    n_cols = int(np.ceil(n_channels / n_rows))
     
-    print("Creating cortical column...")
-    column = CorticalColumn(column_id=0, config=CONFIG)
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(16, 10), dpi=200)
+    axs = axs.ravel()
     
-    for layer_name, layer in column.layers.items():
-        add_heterogeneity_to_layer(layer, CONFIG)
+    vmin = S_mean.min()
+    vmax = S_mean.max()
     
-    all_monitors = column.get_all_monitors()
+    for ch in range(n_channels):
+        pcm = axs[ch].pcolormesh(t_win, foi, S_mean[ch], 
+                                  cmap='jet', vmin=vmin, vmax=vmax)
+        axs[ch].set_title(f"Channel {ch}", fontsize=10)
+        axs[ch].set_xlabel("Time (s)", fontsize=8)
+        axs[ch].set_ylabel("Frequency (Hz)", fontsize=8)
+        axs[ch].tick_params(labelsize=7)
+        axs[ch].axvline(1.0, color='white', linestyle='--', linewidth=1, alpha=0.7)
     
-    print("Running baseline simulation...")
-    column.network.run(500*ms)
+    # Hide unused subplots
+    for ch in range(n_channels, len(axs)):
+        axs[ch].axis('off')
     
-    ############## CREATING STIM INPUT ##############
-    print("Adding stimulus input...")
-    w_ext = CONFIG['synapses']['Q']['EXT']
+    plt.suptitle(f"Superlet Analysis - Condition: {condition_name}", fontsize=14)
+    plt.tight_layout(rect=[0, 0, 0.95, 0.97])
     
-    # L4 stimulus
-    L4 = column.layers['L4']
-    cfg_L4 = CONFIG['layers']['L4']
-    L4_E_grp = L4.neuron_groups['E']
-    N_stim_E = int(cfg_L4['poisson_inputs']['E']['N'] / 2)
-    stim_rate_E = 8*Hz
-    L4_E_stim = PoissonInput(L4_E_grp, 'gE', N=N_stim_E, rate=stim_rate_E, weight=w_ext)
+    # Add colorbar
+    cbar_ax = fig.add_axes([0.96, 0.15, 0.02, 0.7])
+    fig.colorbar(pcm, cax=cbar_ax, label='Z-score')
     
-    L4_PV_grp = L4.neuron_groups['PV']
-    N_stim_PV = int(cfg_L4['poisson_inputs']['PV']['N'] / 2)
-    stim_rate_PV = 6*Hz
-    L4_PV_stim = PoissonInput(L4_PV_grp, 'gE', N=N_stim_PV, rate=stim_rate_PV, weight=w_ext)
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Saved superlet plot to {save_path}")
     
-    # L6 stimulus
-    L6 = column.layers['L6']
-    cfg_L6 = CONFIG['layers']['L6']
-    L6_E_grp = L6.neuron_groups['E']
-    N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'])
-    stim_rate_L6_E = 6*Hz
-    L6_E_stim = PoissonInput(L6_E_grp, 'gE', N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext)
-    
-    N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'])
-    stim_rate_L6_PV = 4*Hz
-    L6_PV_stim = PoissonInput(L6.neuron_groups['PV'], 'gE', N=N_stim_L6_PV, rate=stim_rate_L6_PV, weight=w_ext)
-    
-    column.network.add(L4_E_stim, L4_PV_stim, L6_E_stim, L6_PV_stim)
-    
-    print(" Running stimulation simulation...")
-    column.network.run(500*ms)
-    
-    print("Simulation complete")
-    
-    # Organize monitors
-    spike_monitors = {}
-    state_monitors = {}
-    rate_monitors = {}
-    
-    for layer_name, monitors in all_monitors.items():
-        spike_monitors[layer_name] = {k: v for k, v in monitors.items() if 'spikes' in k}
-        state_monitors[layer_name] = {k: v for k, v in monitors.items() if 'state' in k}
-        rate_monitors[layer_name] = {k: v for k, v in monitors.items() if 'rate' in k}
-    
-    ############## LFP ANALYSIS ##############
-    print(" Computing LFPs for each layer...")
-    layer_lfps = compute_layer_lfps(column, all_monitors)
-    
-    print("Plotting LFPs...")
-    fig_lfp = plot_layer_lfps(layer_lfps)
-    
+    plt.close()
 
+
+def plot_power_spectra(psd_results, condition_name, save_path=None, freq_max=100):
+    """
+    Plot pre/post stimulus power spectra for all channels.
+    """
+    freqs = psd_results['freqs']
+    pre_power = psd_results['pre_power']
+    post_power = psd_results['post_power']
+    pre_sem = psd_results['pre_sem']
+    post_sem = psd_results['post_sem']
     
-    print(" All analyses complete!")
-    plt.show()
+    n_channels = pre_power.shape[0]
+    n_rows = int(np.ceil(np.sqrt(n_channels)))
+    n_cols = int(np.ceil(n_channels / n_rows))
+    
+    # Limit frequency range
+    freq_mask = freqs <= freq_max
+    freqs_plot = freqs[freq_mask]
+    
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(16, 10), dpi=200)
+    axs = axs.ravel()
+    
+    for ch in range(n_channels):
+        pre_p = pre_power[ch, freq_mask]
+        post_p = post_power[ch, freq_mask]
+        pre_s = pre_sem[ch, freq_mask]
+        post_s = post_sem[ch, freq_mask]
+        
+        # Plot with error bands
+        axs[ch].plot(freqs_plot, pre_p, 'b-', label='Pre-stim', linewidth=1.5)
+        axs[ch].fill_between(freqs_plot, pre_p - pre_s, pre_p + pre_s, 
+                             color='b', alpha=0.2)
+        
+        axs[ch].plot(freqs_plot, post_p, 'r-', label='Post-stim', linewidth=1.5)
+        axs[ch].fill_between(freqs_plot, post_p - post_s, post_p + post_s, 
+                             color='r', alpha=0.2)
+        
+        axs[ch].set_title(f"Channel {ch}", fontsize=10)
+        axs[ch].set_xlabel("Frequency (Hz)", fontsize=8)
+        axs[ch].set_ylabel("Power (V²/Hz)", fontsize=8)
+        axs[ch].set_yscale('log')
+        axs[ch].tick_params(labelsize=7)
+        axs[ch].legend(fontsize=7)
+        axs[ch].grid(True, alpha=0.3)
+    
+    # Hide unused subplots
+    for ch in range(n_channels, len(axs)):
+        axs[ch].axis('off')
+    
+    plt.suptitle(f"Power Spectra - Condition: {condition_name}", fontsize=14)
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Saved power spectra plot to {save_path}")
+    
+    plt.close()
+
+
+def analyze_all_conditions(
+    processed_dir="results/lfp_trials_processed",
+    output_dir="results/analysis_by_condition",
+    foi=None,
+    baseline_window=(0.85, 0.99),
+    analysis_window=(0.95, 1.3),
+    pre_window=(-0.2, -0.01),
+    post_window=(0.01, 0.2),
+    verbose=True,
+):
+    """
+    Main analysis function: process all conditions separately.
+    """
+    if foi is None:
+        foi = np.arange(1, 120, 1)
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Load trials grouped by condition
+    trials_by_condition = load_trials_by_condition(processed_dir)
+    
+    # Process each condition
+    for condition_name, trials in trials_by_condition.items():
+        print(f"\n{'='*60}")
+        print(f"Analyzing condition: {condition_name} ({len(trials)} trials)")
+        print(f"{'='*60}")
+        
+        # Create condition-specific output directory
+        cond_dir = os.path.join(output_dir, condition_name)
+        os.makedirs(cond_dir, exist_ok=True)
+        
+        # Stack bipolar LFPs from all trials
+        bipolar_lfps = []
+        time_arrays = []
+        stim_onsets = []
+        
+        for trial in trials:
+            bipolar_lfps.append(trial['bipolar_matrix'])
+            time_arrays.append(trial['time_array_ms'])
+            stim_onsets.append(trial['stim_onset_ms'])
+        
+        # Use first trial's time array (should be same for all)
+        time_ms = time_arrays[0]
+        time_s = time_ms / 1000.0
+        
+        # Average stimulus onset (should be similar with small jitter)
+        stim_onset_s = np.mean(stim_onsets) / 1000.0
+        
+        # Stack: (n_trials, n_channels, n_time)
+        bipolar_lfps = np.stack(bipolar_lfps, axis=0)
+        
+        if verbose:
+            print(f"Data shape: {bipolar_lfps.shape}")
+            print(f"Mean stimulus onset: {stim_onset_s:.3f} s")
+        
+        # 1. SUPERLET ANALYSIS
+        if superlets is not None:
+            print("\n1. Computing superlet analysis...")
+            try:
+                S_mean, t_win, foi_used = compute_superlet_analysis(
+                    bipolar_lfps, time_s, foi=foi,
+                    baseline_window=baseline_window,
+                    analysis_window=analysis_window,
+                )
+                
+                # Save superlet results
+                superlet_path = os.path.join(cond_dir, "superlet_results.npz")
+                np.savez_compressed(
+                    superlet_path,
+                    S_mean=S_mean,
+                    t_win=t_win,
+                    foi=foi_used,
+                    condition_name=condition_name,
+                )
+                print(f"Saved superlet results to {superlet_path}")
+                
+                # Plot superlet results
+                plot_path = os.path.join(cond_dir, "superlet_plot.png")
+                plot_superlet_results(S_mean, t_win, foi_used, condition_name, plot_path)
+                
+            except Exception as e:
+                print(f"Error in superlet analysis: {e}")
+        else:
+            print("\n1. Skipping superlet analysis (package not installed)")
+        
+        # 2. POWER SPECTRA ANALYSIS
+        print("\n2. Computing power spectra...")
+        try:
+            psd_results = compute_power_spectra(
+                bipolar_lfps, time_s, stim_onset_s,
+                pre_window=pre_window,
+                post_window=post_window,
+            )
+            
+            # Save power spectra results
+            psd_path = os.path.join(cond_dir, "power_spectra_results.npz")
+            np.savez_compressed(psd_path, **psd_results, condition_name=condition_name)
+            print(f"Saved power spectra to {psd_path}")
+            
+            # Plot power spectra
+            plot_path = os.path.join(cond_dir, "power_spectra_plot.png")
+            plot_power_spectra(psd_results, condition_name, plot_path)
+            
+        except Exception as e:
+            print(f"Error in power spectra analysis: {e}")
+        
+        # 3. Save summary info
+        summary = {
+            'condition_name': condition_name,
+            'n_trials': len(trials),
+            'stim_rate_multiplier': trials[0]['stim_rate_multiplier'],
+            'stim_n_multiplier': trials[0]['stim_n_multiplier'],
+            'stim_params': trials[0]['stim_params'],
+        }
+        summary_path = os.path.join(cond_dir, "summary.npz")
+        np.savez_compressed(summary_path, **summary)
+        
+        print(f"\nCompleted analysis for {condition_name}")
+    
+    print(f"\n{'='*60}")
+    print("All conditions analyzed!")
+    print(f"Results saved to: {output_dir}")
+    print(f"{'='*60}")
+
 
 if __name__ == "__main__":
-    main()
+    # Run analysis on all processed trials, grouped by condition
+    analyze_all_conditions(
+        processed_dir="results/lfp_trials_processed",
+        output_dir="results/analysis_by_condition",
+        foi=np.arange(1, 120, 1),
+        baseline_window=(0.85, 0.99),    # 150ms before stimulus
+        analysis_window=(0.95, 1.3),      # 50ms before to 300ms after stimulus
+        pre_window=(-0.2, -0.01),         # 200ms to 10ms before stimulus
+        post_window=(0.01, 0.2),          # 10ms to 200ms after stimulus
+        verbose=True,
+    )
