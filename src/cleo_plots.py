@@ -303,7 +303,7 @@ def analyze_and_plot_laminar_recording_mua(sim, column, probe, lfp_sig, mua,
     
     dz_mm = _estimate_contact_spacing_mm(probe.coords / b2.mm)
 
-    L4_zmin, L4_zmax = CONFIG['layers']['L4']['coordinates']['z']
+    L4_zmin, L4_zmax = CONFIG['layers']['L4C']['coordinates']['z']
     z_L4_center_mm = 0.5 * (min(L4_zmin, L4_zmax) + max(L4_zmin, L4_zmax))
 
     rel_orig = (depths_orig_mm - z_L4_center_mm) / dz_mm

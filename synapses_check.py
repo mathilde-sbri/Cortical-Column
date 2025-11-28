@@ -1,7 +1,7 @@
 import pandas as pd
 from collections import defaultdict
 
-from config.config_test import CONFIG
+from config.config_test2 import CONFIG
 
 def count_synapses():
 

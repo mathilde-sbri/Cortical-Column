@@ -2,9 +2,9 @@ from brian2 import *
 import pandas as pd
 from collections import defaultdict
 
-conn_df = pd.read_csv('conn_prob.csv', index_col=0, skipinitialspace=True)
+conn_df = pd.read_csv('conn_prob.csv', index_col=0, skipinitialspace=True)*0.5
 
-conductances = pd.read_csv('conductances.csv', index_col=0, skipinitialspace=True)*0.5
+conductances = pd.read_csv('conductances.csv', index_col=0, skipinitialspace=True)
 
 
 _LAYER_CONFIGS = {
@@ -27,7 +27,7 @@ _LAYER_CONFIGS = {
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),
-            'z': (0.715, 0.805),
+            'z': (1.1, 1.19),
         }
     },
     'L23': {
@@ -44,14 +44,14 @@ _LAYER_CONFIGS = {
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),
-            'z': (0.135, 0.715),
+            'z': (0.45, 1.1),
         }
     },
-    'L4': {
+    'L4AB': {
         'connection_prob': {},
         'conductance': {},
         'input_rate': 8*Hz, 
-        'neuron_counts': {'E': 5760, 'PV': 950, 'SOM': 420, 'VIP': 70},
+        'neuron_counts': {'E': 2720, 'PV': 408, 'SOM': 204, 'VIP': 68},
         'poisson_inputs': {
             'E':  {'target': 'gE',  'weight': 'EXT', 'N': 100}, 
             'PV': {'target': 'gE',  'weight': 'EXT', 'N': 40},  
@@ -61,7 +61,24 @@ _LAYER_CONFIGS = {
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),
-            'z': (-0.135, 0.135),
+            'z': (0.14, 0.45),
+        }
+    },
+    'L4C': {
+        'connection_prob': {},
+        'conductance': {},
+        'input_rate': 8*Hz, 
+        'neuron_counts': {'E': 3192, 'PV': 365, 'SOM': 182, 'VIP': 61},
+        'poisson_inputs': {
+            'E':  {'target': 'gE',  'weight': 'EXT', 'N': 100}, 
+            'PV': {'target': 'gE',  'weight': 'EXT', 'N': 40},  
+            'SOM': {'target': 'gE', 'weight': 'EXT', 'N': 40},
+            'VIP': {'target': 'gE', 'weight': 'EXT', 'N': 30},  
+        },
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (-0.14, 0.14),
         }
     },
     'L5': {
@@ -78,7 +95,7 @@ _LAYER_CONFIGS = {
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),
-            'z': (-0.235, -0.135),
+            'z': (-0.34, -0.14),
         }
     },
     'L6': {
@@ -95,22 +112,28 @@ _LAYER_CONFIGS = {
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),
-            'z': (-0.385, -0.235),
+            'z': (-0.62, -0.34),
         }
     }
 }
 
 _layer_csv = {
-    'L1': {'VIP_row': 'i1Htr3a',
-           'VIP_col': 'i1Htr3a'},
-    'L23': {'E_row': 'E2/3',   'PV_row': 'i2/3Pvalb','SOM_row': 'i2/3Sst',  'VIP_row': 'i2/3Htr3a',
-            'E_col': 'E2/3',   'PV_col': 'i2/3Pvalb','SOM_col': 'i2/3Sst',  'VIP_col': 'i2/3Htr3a'},
-    'L4' : {'E_row': 'E4',     'PV_row': 'i4Pvalb',  'SOM_row': 'i4Sst',    'VIP_row': 'i4Htr3a',
-            'E_col': 'E4',     'PV_col': 'i4Pvalb', 'SOM_col': 'i4Sst',   'VIP_col': 'i4Htr3a'},
-    'L5' : {'E_row': 'E5',     'PV_row': 'i5Pvalb',  'SOM_row': 'i5Sst',    'VIP_row': 'i5Htr3a',
-            'E_col': 'E5',     'PV_col': 'i5Pvalb', 'SOM_col': 'i5Sst',   'VIP_col': 'i5Htr3a'},
-    'L6' : {'E_row': 'E6',     'PV_row': 'i6Pvalb',  'SOM_row': 'i6Sst',    'VIP_row': 'i6Htr3a',
-            'E_col': 'E6',     'PV_col': 'i6Pvalb', 'SOM_col': 'i6Sst',   'VIP_col': 'i6Htr3a'},
+    'L1':  {'VIP_row': 'i1Htr3a', 'VIP_col': 'i1Htr3a'},
+
+    'L23': {'E_row': 'E2/3',      'PV_row': 'i2/3Pvalb', 'SOM_row': 'i2/3Sst',   'VIP_row': 'i2/3Htr3a',
+            'E_col': 'E2/3',      'PV_col': 'i2/3Pvalb', 'SOM_col': 'i2/3Sst',   'VIP_col': 'i2/3Htr3a'},
+
+    'L4C': {'E_row': 'E4C',       'PV_row': 'i4CPvalb',  'SOM_row': 'i4CSst',    'VIP_row': 'i4CHtr3a',
+            'E_col': 'E4C',       'PV_col': 'i4CPvalb',  'SOM_col': 'i4CSst',    'VIP_col': 'i4CHtr3a'},
+
+    'L4AB':{'E_row': 'E4AB',      'PV_row': 'i4ABPvalb', 'SOM_row': 'i4ABSst',   'VIP_row': 'i4ABHtr3a',
+            'E_col': 'E4AB',      'PV_col': 'i4ABPvalb', 'SOM_col': 'i4ABSst',   'VIP_col': 'i4ABHtr3a'},
+
+    'L5':  {'E_row': 'E5',        'PV_row': 'i5Pvalb',   'SOM_row': 'i5Sst',     'VIP_row': 'i5Htr3a',
+            'E_col': 'E5',        'PV_col': 'i5Pvalb',   'SOM_col': 'i5Sst',     'VIP_col': 'i5Htr3a'},
+
+    'L6':  {'E_row': 'E6',        'PV_row': 'i6Pvalb',   'SOM_row': 'i6Sst',     'VIP_row': 'i6Htr3a',
+            'E_col': 'E6',        'PV_col': 'i6Pvalb',   'SOM_col': 'i6Sst',     'VIP_col': 'i6Htr3a'},
 }
 
 def _prob(src_row, tgt_col):
@@ -132,7 +155,7 @@ def _cond(src_row, tgt_col):
 _INTER_LAYER_CONNECTIONS = defaultdict(dict)
 _INTER_LAYER_CONDUCTANCES = defaultdict(dict)
 
-_layers = ['L23', 'L4', 'L5', 'L6']
+_layers = ['L23', 'L4AB','L4C', 'L5', 'L6']
 _pops = ['E', 'PV', 'SOM', 'VIP']
 
 for src in _layers:
@@ -148,21 +171,31 @@ for src in _layers:
                     _LAYER_CONFIGS[src].setdefault('connection_prob', {})[conn] = _prob(s[row], t[col])
                     _LAYER_CONFIGS[src].setdefault('conductance', {})[conn] = _cond(s[row], t[col])/2
                 else:
-                    _INTER_LAYER_CONNECTIONS[(src, dst)][conn]  = _prob(s[row], t[col])
+                    _INTER_LAYER_CONNECTIONS[(src, dst)][conn]  = _prob(s[row], t[col])*0.7
                     _INTER_LAYER_CONDUCTANCES[(src, dst)][conn] = _cond(s[row], t[col])/2
 
-
-
-for layer in ['L23', 'L4', 'L5', 'L6']:
+for layer in ['L23', 'L4AB', 'L4C', 'L5', 'L6']:
     cfg = _LAYER_CONFIGS[layer]
     
     for conn_type in cfg['conductance'].keys():
-        if 'PV' in conn_type.split('_')[0]: 
-            cfg['conductance'][conn_type] *= 1.5
-        if 'SOM' in conn_type.split('_')[0]: 
-            cfg['conductance'][conn_type] *= 1.3
-        if 'VIP' in conn_type.split('_')[0]: 
-            cfg['conductance'][conn_type] *= 1.4
+        if 'PV' in conn_type.split('_')[0]:
+            cfg['conductance'][conn_type] *= 1.2 
+        if 'SOM' in conn_type.split('_')[0]:
+            cfg['conductance'][conn_type] *= 1.2  
+        if 'VIP' in conn_type.split('_')[0]:
+            cfg['conductance'][conn_type] *= 1.3  
+
+for layer in ['L23', 'L4AB', 'L4C', 'L5', 'L6']:
+    cfg = _LAYER_CONFIGS[layer]
+    if 'E_E' in cfg['connection_prob']:
+        cfg['connection_prob']['E_E'] *= 0.85 
+    if 'E_E' in cfg['conductance']:
+        cfg['conductance']['E_E'] *= 0.85 
+
+    if 'E_SOM' in cfg['conductance']:
+        cfg['conductance']['E_SOM'] *= 1.8  # Strong boost
+    if 'E_SOM' in cfg['connection_prob']:
+        cfg['connection_prob']['E_SOM'] *= 1.3  # Also increase probability
 
 for (src, dst), conductances in _INTER_LAYER_CONDUCTANCES.items():
     for conn_type in conductances.keys():
@@ -171,14 +204,6 @@ for (src, dst), conductances in _INTER_LAYER_CONDUCTANCES.items():
         if 'E' in conn_type.split('_')[0]:
             _INTER_LAYER_CONDUCTANCES[(src, dst)][conn_type] *= 0.8
 
-for layer in ['L23', 'L4', 'L5', 'L6']:
-    cfg = _LAYER_CONFIGS[layer]
-    
-    if 'E_E' in cfg['connection_prob']:
-        cfg['connection_prob']['E_E'] *= 0.75  
-    
-    if 'E_E' in cfg['conductance']:
-        cfg['conductance']['E_E'] *= 0.7 
 
 
 

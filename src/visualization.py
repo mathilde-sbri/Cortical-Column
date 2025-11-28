@@ -47,16 +47,21 @@ def plot_raster(spike_monitors, layer_configs, figsize=(15, 10)):
                         color='blue', s=0.5, alpha=0.8, label="SOM")
         
         if 'PV_spikes' in monitors:
-            ax.scatter(monitors['PV_spikes'].t/second,
+            if 'SOM_spikes' in monitors:
+                ax.scatter(monitors['PV_spikes'].t/second,
                         monitors['PV_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'],
                         color='red', s=0.5, alpha=0.8, label="PV")
-            
+            else:
+                ax.scatter(monitors['PV_spikes'].t/second,
+                            monitors['PV_spikes'].i + config['neuron_counts']['E'],
+                            color='red', s=0.5, alpha=0.8, label="PV")
+            ########TO IMPROVE###############
         if 'VIP_spikes' in monitors:
             ax.scatter(monitors['VIP_spikes'].t/second,
                         monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
                         color='gold', s=0.5, alpha=0.8, label="VIP")
         
-        ax.set_xlim(0.0, 0.5)
+        ax.set_xlim(0.3, 1.5)
         ax.set_ylabel('Neuron index')
         ax.set_title(f'{layer_name} Spike Raster Plot')
         ax.legend()
@@ -104,6 +109,7 @@ def plot_power_spectra(state_monitors, layer_configs, figsize=(10, 12)):
             ax.plot(freq[:50], psd[:50], color=color, 
                     label=layer_name, linewidth=2.5)
             ax.set_ylabel('Power', fontsize=18)
+            ax.set_yscale('log')
             ax.grid(True)
             peak_idx = np.argmax(psd[:50])
             ax.axvline(freq[peak_idx], color='r', linestyle='--')
@@ -114,54 +120,216 @@ def plot_power_spectra(state_monitors, layer_configs, figsize=(10, 12)):
     plt.tight_layout()
     return fig
 
+def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions, 
+                                 stim_time=1000, pre_window=300, post_window=300, 
+                                 figsize=(10, 10)):
+    """
+    Compare LFP power spectra before and after stimulus onset.
+    
+    Parameters:
+    -----------
+    lfp_signals : dict
+        Dictionary of LFP signals by electrode index {electrode_idx: signal_array}
+    time_array : array
+        Time array in milliseconds
+    electrode_positions : list
+        List of (x, y, z) electrode positions
+    stim_time : float
+        Time of stimulus onset in ms (default: 1000)
+    pre_window : float
+        Duration of pre-stimulus window in ms (default: 300)
+    post_window : float
+        Duration of post-stimulus window in ms (default: 300)
+    """
+    n_electrodes = len(lfp_signals)
+    n_cols = 2
+    n_rows = int(np.ceil(n_electrodes / n_cols))
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(figsize[0], figsize[1]))
+    axes = axes.flatten() if n_electrodes > 1 else [axes]
+    
+    colors_pre = ['darkblue', 'darkgreen', 'purple', 'darkorange', 'darkred']
+    colors_post = ['lightblue', 'lightgreen', 'violet', 'orange', 'salmon']
+    
+    print(f"\nAnalyzing LFP power spectra...")
+    print(f"Total time range: {time_array[0]:.1f} - {time_array[-1]:.1f} ms")
+    
+    # Define time windows
+    pre_start = stim_time - pre_window
+    pre_end = stim_time
+    post_start = stim_time
+    post_end = stim_time + post_window
+    
+    print(f"Pre-stim window: {pre_start:.1f} - {pre_end:.1f} ms")
+    print(f"Post-stim window: {post_start:.1f} - {post_end:.1f} ms\n")
+    
+    # Check if we have enough data
+    if time_array[-1] < post_end:
+        print(f"WARNING: Simulation ends at {time_array[-1]:.1f} ms, adjusting post window")
+        post_end = time_array[-1]
+    
+    if time_array[0] > pre_start:
+        print(f"WARNING: Simulation starts at {time_array[0]:.1f} ms, adjusting pre window")
+        pre_start = time_array[0]
+    
+    # Create masks for time windows
+    pre_mask = (time_array >= pre_start) & (time_array < pre_end)
+    post_mask = (time_array >= post_start) & (time_array < post_end)
+    
+    for elec_idx, lfp_signal in lfp_signals.items():
+        if elec_idx >= len(axes):
+            break
+            
+        ex, ey, ez = electrode_positions[elec_idx]
+        
+        print(f"Electrode {elec_idx} (z={ez:.2f} mm)...")
+        
+        try:
+            # Extract pre and post stimulus LFP
+            pre_lfp = lfp_signal[pre_mask]
+            post_lfp = lfp_signal[post_mask]
+            
+            print(f"  Pre samples: {len(pre_lfp)}, Post samples: {len(post_lfp)}")
+            
+            if len(pre_lfp) < 100 or len(post_lfp) < 100:
+                print(f"  ERROR: Not enough samples!")
+                continue
+            
+            # Compute power spectra
+            freq_pre, psd_pre = compute_power_spectrum(pre_lfp, fs=10000)
+            freq_post, psd_post = compute_power_spectrum(post_lfp, fs=10000)
+            
+            # Plot
+            ax = axes[elec_idx]
+            color_pre = colors_pre[elec_idx % len(colors_pre)]
+            color_post = colors_post[elec_idx % len(colors_post)]
+            
+            # Limit frequency range for plotting (0-100 Hz)
+            max_freq = 100
+            freq_mask_pre = freq_pre <= max_freq
+            freq_mask_post = freq_post <= max_freq
+            
+            ax.plot(freq_pre[freq_mask_pre], psd_pre[freq_mask_pre], 
+                   color=color_pre, label='Pre-stim', 
+                   linewidth=2.5, linestyle='-')
+            ax.plot(freq_post[freq_mask_post], psd_post[freq_mask_post], 
+                   color=color_post, label='Post-stim', 
+                   linewidth=2.5, linestyle='--')
+            
+            ax.set_ylabel('Power (μV²/Hz)', fontsize=14)
+            ax.set_xlabel('Frequency (Hz)', fontsize=14)
+            ax.set_yscale('log')
+            ax.grid(True, alpha=0.3)
+            ax.set_xlim(0, max_freq)
+            
+            # Find peaks in plotted range
+            peak_idx_pre = np.argmax(psd_pre[freq_mask_pre])
+            peak_idx_post = np.argmax(psd_post[freq_mask_post])
+            
+            peak_freq_pre = freq_pre[freq_mask_pre][peak_idx_pre]
+            peak_freq_post = freq_post[freq_mask_post][peak_idx_post]
+            
+            ax.axvline(peak_freq_pre, color=color_pre, 
+                      linestyle=':', alpha=0.5, linewidth=1.5)
+            ax.axvline(peak_freq_post, color=color_post, 
+                      linestyle=':', alpha=0.5, linewidth=1.5)
+            
+            ax.legend(fontsize=10, loc='upper right')
+            ax.tick_params(axis='both', which='major', labelsize=12)
+            ax.set_title(f'Electrode {elec_idx} (z={ez:.2f}mm)\n'
+                        f'Pre: {peak_freq_pre:.1f}Hz, Post: {peak_freq_post:.1f}Hz', 
+                        fontsize=12)
+            
+            print(f"  ✓ Peak frequencies - Pre: {peak_freq_pre:.1f} Hz, Post: {peak_freq_post:.1f} Hz")
+            
+        except Exception as e:
+            print(f"  ✗ ERROR: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            continue
+    
+    # Hide unused subplots
+    for idx in range(n_electrodes, len(axes)):
+        axes[idx].set_visible(False)
+    
+    plt.tight_layout()
+    print("\n✓ LFP power spectra plot complete!")
+    
+    return fig
 
 
-
-
-
-def plot_rate(rate_monitors, layer_configs, figsize=(10, 12)):
-
+def plot_rate(rate_monitors, layer_configs, figsize=(10, 12), smooth_window=10*ms, 
+              ylim_max=None, show_stats=True):
     layer_names = list(layer_configs.keys()) if isinstance(layer_configs, dict) else list(rate_monitors.keys())
     n_layers = len(layer_names) if layer_names else len(rate_monitors)
-
+    
     if n_layers == 0:
-        # Nothing to plot
         fig = plt.figure(figsize=figsize)
         fig.suptitle("Population Rates (no data)")
         return fig
-
+    
     fig, axes = plt.subplots(n_layers, 1, sharex=True, figsize=figsize)
     if n_layers == 1:
         axes = [axes]
-
-
+    
+    pop_colors = {'E': 'royalblue', 'PV': 'darkorange', 'SOM': 'forestgreen'}
+    
     for ax, layer_name in zip(axes, layer_names):
         layer_rates = rate_monitors.get(layer_name, {})
         plotted_any = False
-
+        stats_text = []
+        
         for pop_key in sorted(layer_rates.keys()):
             mon = layer_rates[pop_key]
             try:
-
                 t = mon.t / ms
-                r = mon.smooth_rate(window='flat', width=10.1*ms) / Hz
-
-                ax.plot(t, r, label=pop_key)
-                ax.set_xlim(0, 1000)
-                #ax.set_ylim(0, 50)
+                r = mon.smooth_rate(window='flat', width=smooth_window) / Hz
+                
+                pop_name = pop_key.split('_')[0] if '_' in pop_key else pop_key
+                color = pop_colors.get(pop_name, 'gray')
+                
+                ax.plot(t, r, label=pop_name, color=color, linewidth=1.5, alpha=0.8)
+                # ax.set_xlim(0, 1000)
+                
+                if show_stats:
+                    pre_mask = (t >= 200) & (t < 500)
+                    post_mask = (t >= 500)
+                    
+                    if np.sum(pre_mask) > 0:
+                        mean_pre = np.mean(r[pre_mask])
+                        stats_text.append(f"{pop_name} pre: {mean_pre:.1f}Hz")
+                    
+                    if np.sum(post_mask) > 0:
+                        mean_post = np.mean(r[post_mask])
+                        stats_text.append(f"{pop_name} post: {mean_post:.1f}Hz")
+                
                 plotted_any = True
+                
             except Exception as e:
-                ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", transform=ax.transAxes, fontsize=8, color="red")
-
-        ax.set_ylabel("Rate (Hz)")
+                ax.text(0.01, 0.9, f"Error plotting {pop_key}: {e}", 
+                       transform=ax.transAxes, fontsize=8, color="red")
         
-        title = f"Layer {layer_name} — Population Rates" if layer_name is not None else "Population Rates"
-        ax.set_title(title)
+        if ylim_max is not None:
+            ax.set_ylim(0, ylim_max)
+        
+        ax.axvline(500, color='red', linestyle='--', alpha=0.5, linewidth=1, label='Stimulus')
+        
+        ax.set_ylabel("Rate (Hz)", fontsize=12)
+        title = f"Layer {layer_name} — Population Rates"
+        ax.set_title(title, fontsize=14)
+        
         if plotted_any:
-            ax.legend(loc="upper right", fontsize=8, frameon=False)
+            ax.legend(loc="upper right", fontsize=10, frameon=True, framealpha=0.9)
+            
+        if show_stats and stats_text:
+            stats_str = '\n'.join(stats_text)
+            ax.text(0.02, 0.98, stats_str, transform=ax.transAxes, 
+                   fontsize=8, verticalalignment='top',
+                   bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
         ax.grid(True, alpha=0.3)
-
-    axes[-1].set_xlabel("Time (s)")
+    
+    axes[-1].set_xlabel("Time (ms)", fontsize=12)
     fig.tight_layout(h_pad=1.0)
     return fig
 

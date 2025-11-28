@@ -57,7 +57,8 @@ def main():
     all_monitors = column.get_all_monitors()
     cleo.viz.plot(column.layers['L1'].neuron_groups['E'], column.layers['L1'].neuron_groups['PV'], column.layers['L1'].neuron_groups['SOM'], column.layers['L1'].neuron_groups['VIP'], 
                   column.layers['L23'].neuron_groups['E'], column.layers['L23'].neuron_groups['PV'], column.layers['L23'].neuron_groups['SOM'], column.layers['L23'].neuron_groups['VIP'],
-                  column.layers['L4'].neuron_groups['E'], column.layers['L4'].neuron_groups['PV'], column.layers['L4'].neuron_groups['SOM'], column.layers['L4'].neuron_groups['VIP'],
+                  column.layers['L4C'].neuron_groups['E'], column.layers['L4C'].neuron_groups['PV'], column.layers['L4C'].neuron_groups['SOM'], column.layers['L4C'].neuron_groups['VIP'],
+                  column.layers['L4AB'].neuron_groups['E'], column.layers['L4AB'].neuron_groups['PV'], column.layers['L4AB'].neuron_groups['SOM'], column.layers['L4AB'].neuron_groups['VIP'],
                   column.layers['L5'].neuron_groups['E'], column.layers['L5'].neuron_groups['PV'], column.layers['L5'].neuron_groups['SOM'], column.layers['L5'].neuron_groups['VIP'],
                   column.layers['L6'].neuron_groups['E'], column.layers['L6'].neuron_groups['PV'], column.layers['L6'].neuron_groups['SOM'], column.layers['L6'].neuron_groups['VIP'],devices=[column.electrode], scatterargs={"alpha": 0.6})
     
@@ -108,8 +109,8 @@ def main():
     w_ext = CONFIG['synapses']['Q']['EXT']
     
 
-    L4 = column.layers['L4']
-    cfg_L4 = CONFIG['layers']['L4']
+    L4 = column.layers['L4C']
+    cfg_L4 = CONFIG['layers']['L4C']
     
     L4_E_grp = L4.neuron_groups['E']
 
@@ -152,7 +153,7 @@ def main():
     sim.run(500 * b2.ms)
 
 
-    spike_mon = all_monitors['L4']['E_spikes']
+    spike_mon = all_monitors['L4C']['E_spikes']
     fig, axs = plt.subplots(3, 1, sharex=True, layout="constrained", figsize=(6, 6))
     
 
@@ -160,7 +161,7 @@ def main():
     axs[0].set(ylabel="NeuronGroup index", title="L4 E — ground-truth spikes")
 
     axs[1].plot(ss.t / b2.ms, ss.i, ".", rasterized=True)
-    axs[1].set(title="L4 E — sorted spikes", ylabel="sorted unit index")
+    axs[1].set(title="L4C E — sorted spikes", ylabel="sorted unit index")
 
     axs[2].plot(mua.t / b2.ms, mua.i, ".", rasterized=True)
     axs[2].set(
