@@ -122,25 +122,7 @@ def plot_power_spectra(state_monitors, layer_configs, figsize=(10, 12)):
 
 def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions, 
                                  stim_time=1000, pre_window=300, post_window=300, 
-                                 figsize=(10, 10)):
-    """
-    Compare LFP power spectra before and after stimulus onset.
-    
-    Parameters:
-    -----------
-    lfp_signals : dict
-        Dictionary of LFP signals by electrode index {electrode_idx: signal_array}
-    time_array : array
-        Time array in milliseconds
-    electrode_positions : list
-        List of (x, y, z) electrode positions
-    stim_time : float
-        Time of stimulus onset in ms (default: 1000)
-    pre_window : float
-        Duration of pre-stimulus window in ms (default: 300)
-    post_window : float
-        Duration of post-stimulus window in ms (default: 300)
-    """
+  
     n_electrodes = len(lfp_signals)
     n_cols = 2
     n_rows = int(np.ceil(n_electrodes / n_cols))
@@ -154,7 +136,6 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
     print(f"\nAnalyzing LFP power spectra...")
     print(f"Total time range: {time_array[0]:.1f} - {time_array[-1]:.1f} ms")
     
-    # Define time windows
     pre_start = stim_time - pre_window
     pre_end = stim_time
     post_start = stim_time
@@ -163,7 +144,6 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
     print(f"Pre-stim window: {pre_start:.1f} - {pre_end:.1f} ms")
     print(f"Post-stim window: {post_start:.1f} - {post_end:.1f} ms\n")
     
-    # Check if we have enough data
     if time_array[-1] < post_end:
         print(f"WARNING: Simulation ends at {time_array[-1]:.1f} ms, adjusting post window")
         post_end = time_array[-1]
@@ -172,7 +152,6 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
         print(f"WARNING: Simulation starts at {time_array[0]:.1f} ms, adjusting pre window")
         pre_start = time_array[0]
     
-    # Create masks for time windows
     pre_mask = (time_array >= pre_start) & (time_array < pre_end)
     post_mask = (time_array >= post_start) & (time_array < post_end)
     
@@ -185,7 +164,6 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
         print(f"Electrode {elec_idx} (z={ez:.2f} mm)...")
         
         try:
-            # Extract pre and post stimulus LFP
             pre_lfp = lfp_signal[pre_mask]
             post_lfp = lfp_signal[post_mask]
             
@@ -195,16 +173,13 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
                 print(f"  ERROR: Not enough samples!")
                 continue
             
-            # Compute power spectra
             freq_pre, psd_pre = compute_power_spectrum(pre_lfp, fs=10000)
             freq_post, psd_post = compute_power_spectrum(post_lfp, fs=10000)
             
-            # Plot
             ax = axes[elec_idx]
             color_pre = colors_pre[elec_idx % len(colors_pre)]
             color_post = colors_post[elec_idx % len(colors_post)]
             
-            # Limit frequency range for plotting (0-100 Hz)
             max_freq = 100
             freq_mask_pre = freq_pre <= max_freq
             freq_mask_post = freq_post <= max_freq
@@ -222,7 +197,6 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
             ax.grid(True, alpha=0.3)
             ax.set_xlim(0, max_freq)
             
-            # Find peaks in plotted range
             peak_idx_pre = np.argmax(psd_pre[freq_mask_pre])
             peak_idx_post = np.argmax(psd_post[freq_mask_post])
             
@@ -248,7 +222,6 @@ def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions,
             traceback.print_exc()
             continue
     
-    # Hide unused subplots
     for idx in range(n_electrodes, len(axes)):
         axes[idx].set_visible(False)
     
@@ -289,7 +262,6 @@ def plot_rate(rate_monitors, layer_configs, figsize=(10, 12), smooth_window=10*m
                 color = pop_colors.get(pop_name, 'gray')
                 
                 ax.plot(t, r, label=pop_name, color=color, linewidth=1.5, alpha=0.8)
-                # ax.set_xlim(0, 1000)
                 
                 if show_stats:
                     pre_mask = (t >= 200) & (t < 500)

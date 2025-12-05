@@ -126,14 +126,14 @@ def main():
 
     ]
     
-    # print("LFP using kernel method")
+    print("LFP using kernel method")
     lfp_signals, time_array = calculate_lfp_kernel_method(
         spike_monitors, 
         neuron_groups,
         CONFIG['layers'],
         electrode_positions,
         fs=10000,
-        sim_duration_ms=2000
+        sim_duration_ms=1500
     )
     # print("Computing CSD from monopolar LFP...")
     # csd, csd_depths, csd_sort_idx = compute_csd_from_lfp(
@@ -146,33 +146,32 @@ def main():
     
 
 
-    # print(" bipolar LFP now")
-    # bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
-    #     lfp_signals, 
-    #     electrode_positions
-    # )
+    print(" bipolar LFP now")
+    bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
+        lfp_signals, 
+        electrode_positions
+    )
 
     fig1 = plot_raster(spike_monitors, CONFIG['layers'])
     # fig2 = plot_lfp(state_monitors, CONFIG['layers'])  # old Mazzoni method
     
     # # kernel method plots
     # fig_kernel = plot_lfp_kernel(lfp_signals, time_array, electrode_positions)
-    # fig_bipolar = plot_bipolar_lfp(bipolar_signals, channel_labels, channel_depths, 
-    #                                time_array, time_range=(0, 1000))
-    # fig_comparison = plot_lfp_comparison(lfp_signals, bipolar_signals, time_array,
-    #                                     electrode_positions, channel_labels, 
-    #                                     channel_depths, time_range=(400, 600))
+    fig_bipolar = plot_bipolar_lfp(bipolar_signals, channel_labels, channel_depths, 
+                                   time_array, time_range=(500, 1500))
+    fig_comparison = plot_lfp_comparison(lfp_signals, bipolar_signals, time_array,
+                                         electrode_positions, channel_labels, 
+                                         channel_depths, time_range=(800, 1200))
     # fig_bipolar_psd = plot_bipolar_power_spectra(bipolar_signals, channel_labels, channel_depths,
     #                                              time_array, fmax=100)
-    
     # fig3 = plot_power_spectra(state_monitors, CONFIG['layers'])
     fig4 = plot_power_spectra_stim(
         lfp_signals, 
         time_array,
         electrode_positions,
         stim_time=1000,
-        pre_window=300,
-        post_window=300
+        pre_window=500,
+        post_window=500
     )
 
     fig5 = plot_rate(rate_monitors, CONFIG['layers'], 

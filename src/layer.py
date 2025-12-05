@@ -313,34 +313,21 @@ def create_inter_layer_synapses(src_layer, dst_layer, config, network):
 
 
 def add_heterogeneity_to_layer(layer, config, variability=0.1):
-    """
-    Add heterogeneity to intrinsic parameters within a layer.
-    
-    Parameters:
-    -----------
-    layer : CorticalLayer
-        Layer to add heterogeneity to
-    config : dict
-        Configuration dictionary
-    variability : float
-        Coefficient of variation for parameter heterogeneity
-    """
+
     intrinsic = config.get('intrinsic_params', {})
     
     for pop_name, group in layer.neuron_groups.items():
         ip = intrinsic.get(pop_name, {})
         n = len(group)
         
-        # Add heterogeneity to membrane properties
         for param in ['C', 'gL', 'EL', 'tauw']:
             if hasattr(group, param):
                 base_val = ip.get(param, getattr(group, param))
                 noise = 1 + variability * np.random.randn(n)
-                noise = np.clip(noise, 0.7, 1.3)  # Limit range
+                noise = np.clip(noise, 0.7, 1.3) 
                 setattr(group, param, base_val * noise)
         
-        # Add heterogeneity to adaptation parameters (if present)
-        if hasattr(group, 'a') and pop_name != 'PV':  # PV has no adaptation
+        if hasattr(group, 'a') and pop_name != 'PV': 
             base_a = ip.get('a', 0*nS)
             if base_a > 0:
                 noise = 1 + variability * np.random.randn(n)

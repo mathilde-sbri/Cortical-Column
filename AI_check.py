@@ -1,23 +1,3 @@
-"""
-sweep_lfp_psd.py
-
-Sweep either:
-  (A) number of PV neurons in L4C
-  (B) external Poisson input rate to L4C
-and compute power spectra using YOUR pipeline:
-  process_lfp -> compute_power_spectrum
-
-Produces:
-  1) PSD curves per condition
-  2) "spectrogram" with parameter (PV or input) on y-axis, frequency on x-axis
-
-Make sure these project imports work in your environment:
-  from config.config_test2 import CONFIG
-  from src.column import CorticalColumn
-  from src.analysis import add_heterogeneity_to_layer, calculate_lfp
-
-Requires scipy for welch.
-"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,17 +6,14 @@ from copy import deepcopy
 import brian2 as b2
 from brian2 import *
 
-# ---- your project imports ----
 from config.config_test2 import CONFIG
 from src.column import CorticalColumn
 from src.analysis import add_heterogeneity_to_layer, calculate_lfp
 
-from scipy.signal import welch  # your compute_power_spectrum uses this
+from scipy.signal import welch 
 
 
-# ============================================================
-# YOUR LFP + PSD FUNCTIONS (verbatim)
-# ============================================================
+
 
 def process_lfp(monitor, start_time_ms=0):
     lfp = calculate_lfp(monitor)
@@ -62,15 +39,8 @@ def compute_power_spectrum(lfp_signal, fs=10000, method='welch', nperseg=None):
         raise ValueError("method must be 'multitaper' or 'welch'")
 
 
-# ============================================================
-# Core single-run helpers
-# ============================================================
-
 def build_and_run_column(config, warmup=400*ms, simtime=800*ms):
-    """
-    Build CorticalColumn, add heterogeneity, run warmup + simtime.
-    Returns all_monitors.
-    """
+
     b2.start_scope()
     np.random.seed(config['simulation']['RANDOM_SEED'])
     b2.defaultclock.dt = config['simulation']['DT']
@@ -81,21 +51,15 @@ def build_and_run_column(config, warmup=400*ms, simtime=800*ms):
 
     all_monitors = column.get_all_monitors()
 
-    # warmup
     column.network.run(warmup)
     
-    # recorded run
     column.network.run(simtime)
 
     return all_monitors
 
 
 def extract_l4c_e_lfp_psd(all_monitors, start_time_ms=0, fmax=150):
-    """
-    Use YOUR process_lfp + compute_power_spectrum
-    on L4C E_state monitor.
-    Returns freqs, psd truncated to fmax.
-    """
+
     l4c_mons = all_monitors.get('L4C', {})
     if 'E_state' not in l4c_mons:
         raise RuntimeError(
@@ -105,7 +69,6 @@ def extract_l4c_e_lfp_psd(all_monitors, start_time_ms=0, fmax=150):
     mon = l4c_mons['E_state']
     _, lfp_stable = process_lfp(mon, start_time_ms=start_time_ms)
 
-    # fs based on simulation dt (more accurate than fixed 10k)
     dt_sec = float(b2.defaultclock.dt/second)
     fs = 1.0 / dt_sec
 
@@ -114,10 +77,6 @@ def extract_l4c_e_lfp_psd(all_monitors, start_time_ms=0, fmax=150):
     mask = freqs <= fmax
     return freqs[mask], psd[mask]
 
-
-# ============================================================
-# PV-count sweep
-# ============================================================
 
 def pv_sweep_lfp_psd(PV_counts,
                      base_config,
@@ -137,7 +96,6 @@ def pv_sweep_lfp_psd(PV_counts,
         config = deepcopy(base_config)
         config['layers']['L4C']['neuron_counts']['PV'] = int(N_PV)
 
-        # If you want constant total inhibition across PV counts:
         if rescale_total_inhibition:
             scale = float(base_PV) / float(N_PV)
             config['layers']['L4C']['conductance']['PV_E'] *= scale
@@ -164,9 +122,6 @@ def pv_sweep_lfp_psd(PV_counts,
     return freqs_ref, psd_mat
 
 
-# ============================================================
-# Input-rate sweep
-# ============================================================
 
 def input_sweep_lfp_psd(input_rates_Hz,
                         base_config,
@@ -197,20 +152,16 @@ def input_sweep_lfp_psd(input_rates_Hz,
 
     psd_mat = np.vstack(psd_list)
     return freqs_ref, psd_mat
-# ============================================================
-# Plotting
-# ============================================================
 
 def plot_psd_curves(freqs, psd_mat, yvals, ylabel, title):
 
     plt.figure(figsize=(10,12))
     
-    # Use a smooth light→dark colormap
     cmap = plt.get_cmap("viridis")
     
     N = len(yvals)
     for i, y in enumerate(yvals):
-        color = cmap(i / (N-1))  # 0→1 from light→dark
+        color = cmap(i / (N-1)) 
         plt.plot(freqs, psd_mat[i], color=color, alpha=0.9, linewidth=2,
                  label=f"{y}")
     
@@ -220,7 +171,6 @@ def plot_psd_curves(freqs, psd_mat, yvals, ylabel, title):
     plt.title(title)
     plt.tight_layout()
 
-    # Optional: only show first and last labels to avoid clutter
     plt.legend(title=ylabel)
 
 def plot_param_spectrogram(freqs, psd_mat, yvals, ylabel, title):
@@ -238,20 +188,12 @@ def plot_param_spectrogram(freqs, psd_mat, yvals, ylabel, title):
     plt.tight_layout()
 
 
-# ============================================================
-# MAIN: choose sweep here
-# ============================================================
-
 def main():
-    # -------------------------
-    # SELECT SWEEP TYPE
-    # -------------------------
-    SWEEP_TYPE = "input"      # "pv" or "input"
 
-    # Common analysis settings
+    SWEEP_TYPE = "input"     
+
     warmup = 400*ms
     simtime = 800*ms
-    # You can cut transient LFP further by setting start_time_ms>0
     start_time_ms = 300
     fmax = 150
 
