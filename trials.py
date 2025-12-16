@@ -207,7 +207,7 @@ def run_multiple_trials(
     baseline_ms=1000,
     post_ms=500,
     fs=10000,
-    save_dir="results/lfp_trials",
+    save_dir="results/trials",
     verbose=True,
 ):
     if base_seed is None:
@@ -257,6 +257,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/lfp_trial_3_secondes_config3_with_stronger_pv",
+        save_dir="results/feedback_trials",
         verbose=True,
     )

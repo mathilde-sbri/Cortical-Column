@@ -165,9 +165,10 @@ class CorticalLayer:
                     on_pre=f'{target_var}_post += {g_inh}*nS'
                 )
                 syn.connect(p=float(p))
-                syn.delay = (f'{delay_mean/ms}*ms + '
-                            f'clip(randn()*{delay_std/ms}, '
-                            f'-{delay_std/ms}*0.5, {delay_std/ms}*2)*ms')
+                # optional delays
+                # syn.delay = (f'{delay_mean/ms}*ms + '
+                #             f'clip(randn()*{delay_std/ms}, '
+                #             f'-{delay_std/ms}*0.5, {delay_std/ms}*2)*ms')
                 
                 self.synapses[connection] = syn
 

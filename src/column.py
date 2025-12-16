@@ -116,7 +116,8 @@ class CorticalColumn:
                         on_pre=on_pre
                     )
                     syn.connect(p=float(prob))
-                    syn.delay = delay_expr
+                    #optional delays 
+                    # syn.delay = delay_expr
                     
                     self.inter_layer_synapses[connection_name] = syn
                     
