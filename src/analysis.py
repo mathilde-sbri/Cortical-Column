@@ -35,6 +35,49 @@ def process_lfp(monitor, start_time_ms=300):
     return time_stable, lfp_stable
 
 
+def calculate_lfp_mazzoni(state_monitor, neuron_params, method='weighted'):
+
+    gE = np.array(state_monitor.gE / nS)
+    gI = np.array(state_monitor.gI / nS)
+    
+    V = np.array(state_monitor.v / mV)
+    
+    E_E = neuron_params.get('E_E', 0.0)      
+    E_I = neuron_params.get('E_I', -70.0)   
+    I_excitatory = np.mean(gE * (V - E_E), axis=0)
+    I_inhibitory = np.mean(gI * (V - E_I), axis=0)
+    
+    time = state_monitor.t / ms
+    dt = time[1] - time[0] if len(time) > 1 else 1.0
+    
+    if method == 'weighted':
+        alpha = 1.65        
+        delay_ms = 6.0    
+        delay_samples = int(delay_ms / dt)
+        
+        I_exc_delayed = np.zeros_like(I_excitatory)
+        if delay_samples < len(I_excitatory):
+            I_exc_delayed[delay_samples:] = I_excitatory[:-delay_samples]
+        
+        lfp_raw = alpha * np.abs(I_exc_delayed) - np.abs(I_inhibitory)
+        
+    elif method == 'absolute':
+        lfp_raw = np.abs(I_excitatory) + np.abs(I_inhibitory)
+        
+    else:
+        raise ValueError("method must be 'weighted' or 'absolute'")
+    
+
+    lfp_mean = np.mean(lfp_raw)
+    lfp_std = np.std(lfp_raw)
+    
+    if lfp_std > 0:
+        lfp_zscore = (lfp_raw - lfp_mean) / lfp_std
+    else:
+        lfp_zscore = lfp_raw - lfp_mean
+    
+    return lfp_zscore, time
+
 def compute_power_spectrum(lfp_signal, fs=10000, nperseg=None):
 
 

@@ -7,11 +7,8 @@ from .analysis import *
 from brian2 import *
 from scipy import signal
 from scipy.ndimage import gaussian_filter1d
-try:
-    from scipy.signal import savgol_filter, butter, filtfilt
-    _HAS_SAVGOL = True
-except Exception:
-    _HAS_SAVGOL = False
+from scipy import signal as scipy_signal
+
 
 
 def plot_raster(spike_monitors, layer_configs, figsize=(15, 10)):
@@ -78,7 +75,10 @@ def plot_lfp(state_monitors, layer_configs, figsize=(15, 12)):
     return fig
 
 
-def plot_power_spectra(state_monitors, layer_configs, figsize=(10, 12)):
+def plot_lfp_power_comparison(state_monitors, layer_configs, baseline_time=1000,
+                               pre_stim_duration=500, post_stim_duration=500,
+                               figsize=(12, 10)):
+    
     fig, axes = plt.subplots(len(state_monitors), 1, figsize=figsize)
     if len(state_monitors) == 1:
         axes = [axes]
@@ -87,22 +87,69 @@ def plot_power_spectra(state_monitors, layer_configs, figsize=(10, 12)):
     
     for i, (layer_name, monitors) in enumerate(state_monitors.items()):
         if 'E_state' in monitors:
-            _, lfp_stable = process_lfp(monitors['E_state'])
-            freq, psd = compute_power_spectrum(lfp_stable)
+            monitor = monitors['E_state']
+            
+            layer_cfg = layer_configs[layer_name]
+            neuron_params = {
+                'E_E': 0.0,     
+                'E_I': -70.0,  
+                'g_L': layer_cfg.get('g_L', 10.0)
+            }
+            
+            lfp_full, time_array = calculate_lfp_mazzoni(
+                monitor, neuron_params, method='weighted'
+            )
+            
+            dt = time_array[1] - time_array[0]
+            pre_start_idx = int((baseline_time - pre_stim_duration) / dt)
+            pre_end_idx = int(baseline_time / dt)
+            post_start_idx = int(baseline_time / dt)
+            post_end_idx = int((baseline_time + post_stim_duration) / dt)
+            
+            lfp_pre = lfp_full[pre_start_idx:pre_end_idx]
+            lfp_post = lfp_full[post_start_idx:post_end_idx]
+            
+            fs = 1000.0 / dt  
+            nperseg = min(1024, len(lfp_pre) // 4)
+            
+            freq_pre, psd_pre = scipy_signal.welch(
+                lfp_pre, fs=fs, nperseg=nperseg, window='hann'
+            )
+            freq_post, psd_post = scipy_signal.welch(
+                lfp_post, fs=fs, nperseg=nperseg, window='hann'
+            )
             
             ax = axes[i]
             color = colors[i % len(colors)]
-            ax.plot(freq[:50], psd[:50], color=color, 
-                    label=layer_name, linewidth=2.5)
-            ax.set_ylabel('Power', fontsize=18)
+            
+            ax.plot(freq_pre[:100], psd_pre[:100], color=color,
+                   label=f'{layer_name} Pre-stim', linewidth=2.5, linestyle='-')
+            
+            ax.plot(freq_post[:100], psd_post[:100], color=color,
+                   label=f'{layer_name} Post-stim', linewidth=2.5, 
+                   linestyle='--', alpha=0.8)
+            
+            ax.set_ylabel('Power (a.u.)', fontsize=16)
             ax.set_yscale('log')
-            ax.grid(True)
-            peak_idx = np.argmax(psd[:50])
-            ax.axvline(freq[peak_idx], color='r', linestyle='--')
-            ax.legend(fontsize=20, loc='upper center')
-            ax.tick_params(axis='both', which='major', labelsize=14)
+            ax.set_xscale('log')
+            ax.set_xlim(0,220)
+            ax.set_ylim(0.000009,0.002)
+            ax.grid(True, alpha=0.3)
+            
+            peak_idx_pre = np.argmax(psd_pre[:100])
+            peak_idx_post = np.argmax(psd_post[:100])
+            
+            ax.axvline(freq_pre[peak_idx_pre], color=color, linestyle=':', 
+                      alpha=0.5, linewidth=1.5, label=f'Pre peak: {freq_pre[peak_idx_pre]:.1f} Hz')
+            ax.axvline(freq_post[peak_idx_post], color='r', linestyle=':', 
+                      alpha=0.5, linewidth=1.5, label=f'Post peak: {freq_post[peak_idx_post]:.1f} Hz')
+            
+            ax.legend(fontsize=11, loc='upper right')
+            ax.tick_params(axis='both', which='major', labelsize=12)
+            ax.set_title(f'{layer_name} - LFP Power Spectrum (Mazzoni Method)', 
+                        fontsize=14, fontweight='bold')
     
-    axes[-1].set_xlabel('Frequency (Hz)', fontsize=18)
+    axes[-1].set_xlabel('Frequency (Hz)', fontsize=16)
     plt.tight_layout()
     return fig
 

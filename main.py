@@ -25,71 +25,71 @@ def main():
     column.network.run(baseline_time*ms)
 
     ##############  FEEDFORWARD STIM INPUT ##############
-    # w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
-    
-
-    # L4C = column.layers['L4C']
-    # cfg_L4C = CONFIG['layers']['L4C']
-    
-    # L4C_E_grp = L4C.neuron_groups['E']
-
-    
-    # N_stim_E = int(cfg_L4C['poisson_inputs']['E']['N'])
-    # stim_rate_E = 30*Hz  
-
-
-    
-    # L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
-    #                          N=N_stim_E, rate=stim_rate_E, weight=w_ext_AMPA/2)
-  
-    # L4C_PV_grp = L4C.neuron_groups['PV']
-    # N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
-    # stim_rate_PV = 30*Hz
-    
-    # L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA', 
-    #                           N=N_stim_PV, rate=stim_rate_PV, weight=w_ext_AMPA)
-    
-    
-    
-    # # L6 receives weaker halamic input
-    # L6 = column.layers['L6']
-    # cfg_L6 = CONFIG['layers']['L6']
-    
-    # L6_E_grp = L6.neuron_groups['E']
-    
-    # N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'] )
-    # stim_rate_L6_E = 3*Hz
-    
-    # L6_E_stim = PoissonInput(L6_E_grp, 'gE_AMPA',
-    #                          N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext_AMPA/3)
-    
-
-    
-
-    # column.network.add(L4C_E_stimAMPA, L4C_PV_stim, L6_E_stim)
-
-    ##############################################
-
-     ############## CREATING FEEDBACK STIM INPUT ##############
     w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
     
 
+    L4C = column.layers['L4C']
+    cfg_L4C = CONFIG['layers']['L4C']
+    
+    L4C_E_grp = L4C.neuron_groups['E']
+
+    
+    N_stim_E = int(cfg_L4C['poisson_inputs']['E']['N'])
+    stim_rate_E = 10*Hz  
+
+
+    
+    L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
+                             N=N_stim_E, rate=stim_rate_E, weight=w_ext_AMPA/2)
+  
+    L4C_PV_grp = L4C.neuron_groups['PV']
+    N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
+    stim_rate_PV = 10*Hz
+    
+    L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA', 
+                              N=N_stim_PV, rate=stim_rate_PV, weight=w_ext_AMPA)
+    
+    
+    
+    # L6 receives weaker halamic input
     L6 = column.layers['L6']
     cfg_L6 = CONFIG['layers']['L6']
     
-    L6_SOM_grp = L6.neuron_groups['SOM']
+    L6_E_grp = L6.neuron_groups['E']
+    
+    N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'] )
+    stim_rate_L6_E = 3*Hz
+    
+    L6_E_stim = PoissonInput(L6_E_grp, 'gE_AMPA',
+                             N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext_AMPA/3)
+    
 
     
-    N_stim_SOM = int(cfg_L6['poisson_inputs']['SOM']['N']/2)
-    stim_rate_SOM = 5*Hz  
+
+    column.network.add(L4C_E_stimAMPA, L4C_PV_stim, L6_E_stim)
+
+    ##############################################
+
+    #  ############## CREATING FEEDBACK STIM INPUT ##############
+    # w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
+    
+
+    # L6 = column.layers['L6']
+    # cfg_L6 = CONFIG['layers']['L6']
+    
+    # L6_SOM_grp = L6.neuron_groups['SOM']
+
+    
+    # N_stim_SOM = int(cfg_L6['poisson_inputs']['SOM']['N']/2)
+    # stim_rate_SOM = 5*Hz  
 
 
     
-    L6_SOM_stimAMPA = PoissonInput(L6_SOM_grp, 'gE_AMPA', 
-                             N=N_stim_SOM, rate=stim_rate_SOM, weight=w_ext_AMPA)
+    # L6_SOM_stimAMPA = PoissonInput(L6_SOM_grp, 'gE_AMPA', 
+    #                          N=N_stim_SOM, rate=stim_rate_SOM, weight=w_ext_AMPA)
 
     
-    column.network.add(L6_SOM_stimAMPA)
+    # column.network.add(L6_SOM_stimAMPA)
 
     column.network.run(500*ms)
 
@@ -148,7 +148,14 @@ def main():
 
     fig_raster = plot_raster(spike_monitors, CONFIG['layers'])
 
-    fig_power = plot_power_spectra(state_monitors, CONFIG['layers'])
+    fig_power_lfp = plot_lfp_power_comparison(
+                        state_monitors, 
+                        CONFIG['layers'],
+                        baseline_time=baseline_time,
+                        pre_stim_duration=500,
+                        post_stim_duration=500
+                    )
+
 
     fig_rate = plot_rate(rate_monitors, CONFIG['layers'], baseline_time,
                  smooth_window=15*ms, 
