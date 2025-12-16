@@ -6,7 +6,7 @@ from copy import deepcopy
 import brian2 as b2
 from brian2 import *
 
-from config.config_test2 import CONFIG
+from config.config import CONFIG
 from src.column import CorticalColumn
 from src.analysis import add_heterogeneity_to_layer, calculate_lfp
 
@@ -46,8 +46,8 @@ def build_and_run_column(config, warmup=400*ms, simtime=800*ms):
     b2.defaultclock.dt = config['simulation']['DT']
 
     column = CorticalColumn(column_id=0, config=config)
-    for _, layer in column.layers.items():
-        add_heterogeneity_to_layer(layer, config)
+    # for _, layer in column.layers.items():
+    #     add_heterogeneity_to_layer(layer, config)
 
     all_monitors = column.get_all_monitors()
 
@@ -239,7 +239,7 @@ def main():
         plot_param_spectrogram(
             freqs, psd_mat, input_rates,
             ylabel="Stim rate to E (Hz)",
-            title="Frequency content as external input varies (LFP-based)"
+            title="Frequency  as external input varies (LFP)"
         )
 
     else:

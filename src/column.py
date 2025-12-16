@@ -1,5 +1,5 @@
 """
-Column class implementation with NMDA support
+Column class implementation 
 """
 import brian2 as b2
 from brian2 import *
@@ -8,10 +8,7 @@ from cleo import ephys
 
 
 class CorticalColumn:
-    """
-    A cortical column with multiple layers.
-    All excitatory synapses have both AMPA and NMDA components.
-    """
+
     
     def __init__(self, column_id=0, config=None):
         self.column_id = column_id
@@ -33,7 +30,6 @@ class CorticalColumn:
         self._insert_electrode()
 
     def _insert_electrode(self):
-        """Insert a linear electrode probe for LFP recording"""
         array_length = 2.25 * b2.mm  # 15 intervals × 150um
         channel_count = 16
         coords = ephys.linear_shank_coords(
@@ -45,7 +41,6 @@ class CorticalColumn:
         self.electrode = probe
 
     def _assemble_network(self):
-        """Collect all components into the network"""
         for layer in self.layers.values():
             self.network.add(*layer.neuron_groups.values())
             self.network.add(*layer.synapses.values())
@@ -55,7 +50,6 @@ class CorticalColumn:
         self.network.add(*self.inter_layer_synapses.values())
 
     def _create_layers(self):
-        """Create all cortical layers"""
         for layer_name in self.layer_names:
             if layer_name in self.config['layers']:
                 self.layers[layer_name] = CorticalLayer(
@@ -65,7 +59,6 @@ class CorticalColumn:
                 )
 
     def _get_inter_layer_delay_params(self, pre_pop, excitatory):
-        """Get delay parameters for inter-layer connections"""
         if excitatory:
             delay_mean = 1.5*ms
             delay_std = 0.8*ms
@@ -75,11 +68,7 @@ class CorticalColumn:
         return delay_mean, delay_std
 
     def _create_inter_layer_connections(self):
-        """
-        Create inter-layer synaptic connections.
-        Excitatory connections have both AMPA and NMDA components.
-        Inhibitory connections target specific receptor types (gPV, gSOM, gVIP).
-        """
+  
         inter_conns = self.config.get('inter_layer_connections', {})
         inter_conds = self.config.get('inter_layer_conductances', {})
         
@@ -110,7 +99,6 @@ class CorticalColumn:
                 connection_name = f"{source_layer}_{target_layer}_{conn}"
                 
                 if excitatory:
-                    # Excitatory: create synapse with both AMPA and NMDA
                     ampa_key = f'{conn}_AMPA'
                     nmda_key = f'{conn}_NMDA'
                     
@@ -133,9 +121,8 @@ class CorticalColumn:
                     self.inter_layer_synapses[connection_name] = syn
                     
                 else:
-                    # Inhibitory: target specific receptor based on source population
                     g_inh = cond_dict.get(conn, 0.02)
-                    target_var = 'g' + pre  # gPV, gSOM, or gVIP
+                    target_var = 'g' + pre  
                     
                     on_pre = f'{target_var}_post += {g_inh}*nS'
                     
@@ -150,25 +137,18 @@ class CorticalColumn:
                     self.inter_layer_synapses[connection_name] = syn
 
     def get_layer(self, layer_name):
-        """Get a specific layer by name"""
         return self.layers.get(layer_name)
 
     def get_all_monitors(self):
-        """Get all monitors from all layers"""
         all_monitors = {}
         for layer_name, layer in self.layers.items():
             all_monitors[layer_name] = layer.monitors
         return all_monitors
     
     def get_all_neuron_groups(self):
-        """Get all neuron groups from all layers"""
         all_groups = {}
         for layer_name, layer in self.layers.items():
             all_groups[layer_name] = layer.neuron_groups
         return all_groups
     
-    def print_connection_summary(self):
-        """Print a summary of all inter-layer connections"""
-        print("\n=== Inter-Layer Connection Summary ===")
-        for name, syn in self.inter_layer_synapses.items():
-            print(f"{name}: {len(syn)} synapses")
+  

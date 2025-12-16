@@ -1,5 +1,5 @@
 """
-Visualization functions
+Plotting functions
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,20 +12,6 @@ try:
     _HAS_SAVGOL = True
 except Exception:
     _HAS_SAVGOL = False
-
-
-def _smooth(y, window=11, poly=3):
-    y = np.asarray(y)
-    if y.size < 3:
-        return y
-    if _HAS_SAVGOL:
-        window = max(3, min(window | 1, len(y) - (1 - len(y) % 2)))
-        poly = min(poly, window - 1)
-        return savgol_filter(y, window_length=window, polyorder=poly, mode="interp")
-    else:
-        w = max(3, window)
-        k = np.ones(w) / w
-        return np.convolve(y, k, mode="same")
 
 
 def plot_raster(spike_monitors, layer_configs, figsize=(15, 10)):
@@ -120,118 +106,9 @@ def plot_power_spectra(state_monitors, layer_configs, figsize=(10, 12)):
     plt.tight_layout()
     return fig
 
-def plot_power_spectra_stim(lfp_signals, time_array, electrode_positions, 
-                                 stim_time=1000, pre_window=300, post_window=300, 
-  
-    n_electrodes = len(lfp_signals)
-    n_cols = 2
-    n_rows = int(np.ceil(n_electrodes / n_cols))
-    
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(figsize[0], figsize[1]))
-    axes = axes.flatten() if n_electrodes > 1 else [axes]
-    
-    colors_pre = ['darkblue', 'darkgreen', 'purple', 'darkorange', 'darkred']
-    colors_post = ['lightblue', 'lightgreen', 'violet', 'orange', 'salmon']
-    
-    print(f"\nAnalyzing LFP power spectra...")
-    print(f"Total time range: {time_array[0]:.1f} - {time_array[-1]:.1f} ms")
-    
-    pre_start = stim_time - pre_window
-    pre_end = stim_time
-    post_start = stim_time
-    post_end = stim_time + post_window
-    
-    print(f"Pre-stim window: {pre_start:.1f} - {pre_end:.1f} ms")
-    print(f"Post-stim window: {post_start:.1f} - {post_end:.1f} ms\n")
-    
-    if time_array[-1] < post_end:
-        print(f"WARNING: Simulation ends at {time_array[-1]:.1f} ms, adjusting post window")
-        post_end = time_array[-1]
-    
-    if time_array[0] > pre_start:
-        print(f"WARNING: Simulation starts at {time_array[0]:.1f} ms, adjusting pre window")
-        pre_start = time_array[0]
-    
-    pre_mask = (time_array >= pre_start) & (time_array < pre_end)
-    post_mask = (time_array >= post_start) & (time_array < post_end)
-    
-    for elec_idx, lfp_signal in lfp_signals.items():
-        if elec_idx >= len(axes):
-            break
-            
-        ex, ey, ez = electrode_positions[elec_idx]
-        
-        print(f"Electrode {elec_idx} (z={ez:.2f} mm)...")
-        
-        try:
-            pre_lfp = lfp_signal[pre_mask]
-            post_lfp = lfp_signal[post_mask]
-            
-            print(f"  Pre samples: {len(pre_lfp)}, Post samples: {len(post_lfp)}")
-            
-            if len(pre_lfp) < 100 or len(post_lfp) < 100:
-                print(f"  ERROR: Not enough samples!")
-                continue
-            
-            freq_pre, psd_pre = compute_power_spectrum(pre_lfp, fs=10000)
-            freq_post, psd_post = compute_power_spectrum(post_lfp, fs=10000)
-            
-            ax = axes[elec_idx]
-            color_pre = colors_pre[elec_idx % len(colors_pre)]
-            color_post = colors_post[elec_idx % len(colors_post)]
-            
-            max_freq = 100
-            freq_mask_pre = freq_pre <= max_freq
-            freq_mask_post = freq_post <= max_freq
-            
-            ax.plot(freq_pre[freq_mask_pre], psd_pre[freq_mask_pre], 
-                   color=color_pre, label='Pre-stim', 
-                   linewidth=2.5, linestyle='-')
-            ax.plot(freq_post[freq_mask_post], psd_post[freq_mask_post], 
-                   color=color_post, label='Post-stim', 
-                   linewidth=2.5, linestyle='--')
-            
-            ax.set_ylabel('Power (μV²/Hz)', fontsize=14)
-            ax.set_xlabel('Frequency (Hz)', fontsize=14)
-            ax.set_yscale('log')
-            ax.grid(True, alpha=0.3)
-            ax.set_xlim(0, max_freq)
-            
-            peak_idx_pre = np.argmax(psd_pre[freq_mask_pre])
-            peak_idx_post = np.argmax(psd_post[freq_mask_post])
-            
-            peak_freq_pre = freq_pre[freq_mask_pre][peak_idx_pre]
-            peak_freq_post = freq_post[freq_mask_post][peak_idx_post]
-            
-            ax.axvline(peak_freq_pre, color=color_pre, 
-                      linestyle=':', alpha=0.5, linewidth=1.5)
-            ax.axvline(peak_freq_post, color=color_post, 
-                      linestyle=':', alpha=0.5, linewidth=1.5)
-            
-            ax.legend(fontsize=10, loc='upper right')
-            ax.tick_params(axis='both', which='major', labelsize=12)
-            ax.set_title(f'Electrode {elec_idx} (z={ez:.2f}mm)\n'
-                        f'Pre: {peak_freq_pre:.1f}Hz, Post: {peak_freq_post:.1f}Hz', 
-                        fontsize=12)
-            
-            print(f"  ✓ Peak frequencies - Pre: {peak_freq_pre:.1f} Hz, Post: {peak_freq_post:.1f} Hz")
-            
-        except Exception as e:
-            print(f"  ✗ ERROR: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            continue
-    
-    for idx in range(n_electrodes, len(axes)):
-        axes[idx].set_visible(False)
-    
-    plt.tight_layout()
-    print("\n✓ LFP power spectra plot complete!")
-    
-    return fig
 
 
-def plot_rate(rate_monitors, layer_configs, figsize=(10, 12), smooth_window=10*ms, 
+def plot_rate(rate_monitors, layer_configs, stim_time, figsize=(10, 12), smooth_window=10*ms, 
               ylim_max=None, show_stats=True):
     layer_names = list(layer_configs.keys()) if isinstance(layer_configs, dict) else list(rate_monitors.keys())
     n_layers = len(layer_names) if layer_names else len(rate_monitors)
@@ -262,6 +139,7 @@ def plot_rate(rate_monitors, layer_configs, figsize=(10, 12), smooth_window=10*m
                 color = pop_colors.get(pop_name, 'gray')
                 
                 ax.plot(t, r, label=pop_name, color=color, linewidth=1.5, alpha=0.8)
+                # ax.set_xlim(0, 1000)
                 
                 if show_stats:
                     pre_mask = (t >= 200) & (t < 500)
@@ -284,6 +162,7 @@ def plot_rate(rate_monitors, layer_configs, figsize=(10, 12), smooth_window=10*m
         if ylim_max is not None:
             ax.set_ylim(0, ylim_max)
         
+        stim_time=stim_time/ms
         ax.axvline(500, color='red', linestyle='--', alpha=0.5, linewidth=1, label='Stimulus')
         
         ax.set_ylabel("Rate (Hz)", fontsize=12)
@@ -305,44 +184,6 @@ def plot_rate(rate_monitors, layer_configs, figsize=(10, 12), smooth_window=10*m
     fig.tight_layout(h_pad=1.0)
     return fig
 
-
-def plot_spectrogram(state_monitors, layer_configs, fmax=100, win_ms=250, step_ms=25,
-                    light_window=(2.0, 4.0), figsize=(12, 5)):
-    import matplotlib.pyplot as plt
-    figs = []
-    
-    for layer_name, monitors in state_monitors.items():
-        if 'E_state' not in monitors:
-            continue
-        
-        time_ms, lfp = process_lfp(monitors['E_state'])
-        
-        f, t_spec, Sxx = compute_spectrogram(lfp, fs=10000, window_ms=50, overlap=0.85)
-        
-        Sxx_db = 10 * np.log10(Sxx + 1e-20)
-        
-        fmask = f <= fmax
-        
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-        im = ax.imshow(Sxx_db[fmask, :], origin='lower', aspect='auto',
-                    extent=[t_spec[0], t_spec[-1], f[fmask][0], f[fmask][-1]],
-                    cmap='viridis')
-        ax.set_title(f'{layer_name} LFP Spectrogram')
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Frequency (Hz)')
-        ax.set_ylim([0, fmax])
-        
-        cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label('Power (dB)')
-        
-        if light_window is not None:
-            on, off = light_window
-            ax.axvline(on, color='w', ls='--', lw=1)
-            ax.axvline(off, color='w', ls='--', lw=1)
-        
-        figs.append(fig)
-    
-    return figs
 
 
 def plot_peak_freq_track(state_monitors, layer_configs, f_gamma=(20, 80), fmax=100,
@@ -373,4 +214,175 @@ def plot_peak_freq_track(state_monitors, layer_configs, f_gamma=(20, 80), fmax=1
     return figs
 
     
+def plot_lfp_kernel(lfp_signals, time_array, electrode_positions, figsize=(15, 10)):
+    n_electrodes = len(lfp_signals)
+    
+    fig, axes = plt.subplots(n_electrodes, 1, figsize=figsize, sharex=True)
+    if n_electrodes == 1:
+        axes = [axes]
+    
+    for i, (elec_idx, lfp) in enumerate(lfp_signals.items()):
+        ax = axes[i]
+        ex, ey, ez = electrode_positions[elec_idx]
+        
+        # if np.std(lfp) > 0:
+        #     lfp_norm = (lfp - np.mean(lfp)) / np.std(lfp)
+        # else:
+        lfp_norm = lfp
+        
+        ax.plot(time_array, lfp_norm, 'b-', linewidth=0.5)
+        ax.set_ylabel('LFP (norm)')
+        #ax.set_title(f'Electrode {i} at z={ez:.3f} mm')
+        ax.grid(True, alpha=0.3)
+        
+        ax.set_xlim(200, 1000)
+        ax.set_ylim(-250, 100)
+    
+    axes[-1].set_xlabel('Time (ms)')
+    plt.tight_layout()
+    return fig
+
+def plot_bipolar_lfp(bipolar_signals, channel_labels, channel_depths, time_array, 
+                     figsize=(14, 10), time_range=(0, 1000)):
+
+    n_channels = len(bipolar_signals)
+    
+    fig, axes = plt.subplots(n_channels, 1, figsize=figsize, sharex=True)
+    if n_channels == 1:
+        axes = [axes]
+    
+    time_mask = (time_array >= time_range[0]) & (time_array <= time_range[1])
+    time_plot = time_array[time_mask]
+    
+    for i, (ch_idx, lfp) in enumerate(bipolar_signals.items()):
+        ax = axes[i]
+        lfp_plot = lfp[time_mask]
+        
+        if np.std(lfp_plot) > 0:
+            lfp_norm = (lfp_plot - np.mean(lfp_plot)) / np.std(lfp_plot)
+        else:
+            lfp_norm = lfp_plot
+        
+        ax.plot(time_plot, lfp_norm, 'k-', linewidth=0.8)
+        ax.set_ylabel(f'{channel_labels[i]} (z={channel_depths[i]:.3f} mm)', fontsize=10)
+        ax.set_xlim(-200,500)
+        
+        ax.grid(True, alpha=0.3)
+        ax.axhline(0, color='gray', linestyle='--', linewidth=0.5, alpha=0.5)
+        
+        if i < n_channels - 1:
+            ax.set_xticklabels([])
+    
+    axes[-1].set_xlabel('Time (ms)', fontsize=12)
+    axes[0].set_title('Bipolar LFP', fontsize=14, loc='left', fontweight='bold')
+    
+    plt.tight_layout()
+    return fig
+
+def plot_lfp_comparison(lfp_signals, bipolar_signals, time_array, electrode_positions, 
+                        channel_labels, channel_depths, figsize=(18, 12), time_range=(0, 1000)):
+
+    n_monopolar = len(lfp_signals)
+    n_bipolar = len(bipolar_signals)
+    
+    fig, (ax_mono, ax_bipo) = plt.subplots(1, 2, figsize=figsize, sharey=True)
+    
+    time_mask = (time_array >= time_range[0]) & (time_array <= time_range[1])
+    time_plot = time_array[time_mask]
+    
+    offset_mono = 0
+    spacing_mono = 6 
+    
+    for i in range(n_monopolar):
+        lfp = lfp_signals[i][time_mask]
+        if np.std(lfp) > 0:
+            lfp_norm = (lfp - np.mean(lfp)) / np.std(lfp)
+        else:
+            lfp_norm = lfp
+        
+        ax_mono.plot(time_plot, lfp_norm + offset_mono, 'b-', linewidth=0.8, alpha=0.8)
+        ex, ey, ez = electrode_positions[i]
+        ax_mono.text(time_range[0] - 50, offset_mono, f'Ch{i}\nz={ez:.2f}', 
+                    ha='right', va='center', fontsize=9)
+        offset_mono += spacing_mono
+    
+    ax_mono.set_xlabel('Time (ms)', fontsize=12)
+    ax_mono.set_ylabel('Channels (monopolar)', fontsize=12)
+    ax_mono.set_title('Monopolar LFP', fontsize=14, fontweight='bold')
+    ax_mono.set_xlim(time_range)
+    ax_mono.grid(True, alpha=0.3)
+    ax_mono.spines['left'].set_visible(False)
+    ax_mono.set_yticks([])
+    
+    offset_bipo = 0
+    spacing_bipo = 6
+    
+    for i, (ch_idx, lfp) in enumerate(bipolar_signals.items()):
+        lfp_plot = lfp[time_mask]
+        if np.std(lfp_plot) > 0:
+            lfp_norm = (lfp_plot - np.mean(lfp_plot)) / np.std(lfp_plot)
+        else:
+            lfp_norm = lfp_plot
+        
+        ax_bipo.plot(time_plot, lfp_norm + offset_bipo, 'r-', linewidth=0.8, alpha=0.8)
+        ax_bipo.text(time_range[0] - 50, offset_bipo, 
+                    f'{channel_labels[i]}\nz={channel_depths[i]:.2f}', 
+                    ha='right', va='center', fontsize=9)
+        offset_bipo += spacing_bipo
+    
+    ax_bipo.set_xlabel('Time (ms)', fontsize=12)
+    ax_bipo.set_title('Bipolar LFP', fontsize=14, fontweight='bold')
+    ax_bipo.set_xlim(time_range)
+    ax_bipo.grid(True, alpha=0.3)
+    ax_bipo.spines['left'].set_visible(False)
+    ax_bipo.set_yticks([])
+    
+    plt.tight_layout()
+    return fig
+
+def plot_bipolar_power_spectra(bipolar_signals, channel_labels, channel_depths, time_array, 
+                               fs=10000, fmax=100, ncols=3, figsize=None):
+ 
+    freq, psds = compute_bipolar_power_spectrum(
+        bipolar_signals, time_array, fs=fs, fmax=fmax
+    )
+
+    n_channels = len(psds)
+    
+    nrows = int(np.ceil(n_channels / ncols))
+    if figsize is None:
+        figsize =  (16, 20)
+
+    fig, axes = plt.subplots(15, 1, sharex=True, sharey=True, figsize=figsize)
+    axes = np.array(axes).reshape(-1)
+
+    for ax in axes[n_channels:]:
+        ax.axis('off')
+
+    for (ch_idx, psd), ax in zip(psds.items(), axes[:n_channels]):
+        ax.plot(freq, psd, linewidth=1.5, alpha=0.9)
+
+        peak_idx = np.argmax(psd)
+        ax.plot(freq[peak_idx], psd[peak_idx], 'o',
+                markersize=4, markeredgecolor='white', markeredgewidth=1)
+
+        ax.set_ylabel(
+            f"{channel_labels[ch_idx]}\n(z={channel_depths[ch_idx]:.3f} mm)",
+            fontsize=9
+        )
+
+
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(0, fmax)
+
+    fig.text(0.5, 0.04, 'Frequency (Hz)', ha='center', fontsize=12)
+    fig.text(0.04, 0.5, 'Power Spectral Density (a.u.)',
+             va='center', rotation='vertical', fontsize=12)
+
+    fig.suptitle('Bipolar LFP Power Spectra', fontsize=14, fontweight='bold', y=0.98)
+
+    plt.tight_layout(rect=[0.06, 0.06, 1.0, 0.95])
+
+    return fig
+
 

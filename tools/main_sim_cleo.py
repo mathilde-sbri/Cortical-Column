@@ -2,7 +2,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 from brian2tools import *
-from config.config_test2 import CONFIG
+from config.config import CONFIG
 from src.column import CorticalColumn
 import cleo
 from cleo import ephys
@@ -20,10 +20,8 @@ def _existing_syn(layer, pre, post):
     if s is None:
         return None
     try:
-        # Brian2 Synapses implements __len__ as number of synaptic connections
         n = len(s)
     except Exception:
-        # Fallbacks, just in case
         n = getattr(s, "N", None)
         if n is None:
             try:
@@ -51,8 +49,8 @@ def main():
     print(" Creating cortical column...")
     column = CorticalColumn(column_id=0, config=CONFIG)
     
-    for layer_name, layer in column.layers.items():
-        add_heterogeneity_to_layer(layer, CONFIG)
+    # for layer_name, layer in column.layers.items():
+    #     add_heterogeneity_to_layer(layer, CONFIG)
     
     all_monitors = column.get_all_monitors()
     fig, ax = cleo.viz.plot(column.layers['L1'].neuron_groups['E'], column.layers['L1'].neuron_groups['PV'], column.layers['L1'].neuron_groups['SOM'], column.layers['L1'].neuron_groups['VIP'], 

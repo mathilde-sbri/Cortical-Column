@@ -2,7 +2,7 @@ import os
 import numpy as np
 import brian2 as b2
 from brian2 import *
-from config.config_test2 import CONFIG
+from config.config import CONFIG
 from src.column import CorticalColumn
 from src.visualization import *
 from src.analysis import *
@@ -16,16 +16,6 @@ def run_single_trial(
     fs=10000,
     verbose=True,
 ):
-    """
-    Run a single trial with a pre-stim baseline and a post-stim period.
-
-    baseline_ms : float
-        Duration of pre-stimulus simulation.
-    post_ms : float
-        Duration of post-stimulus simulation (after adding PoissonInput).
-    """
-
-    # --------- RNG / Brian2 setup ----------
     if base_seed is None:
         base_seed = config['simulation']['RANDOM_SEED']
 
@@ -40,21 +30,19 @@ def run_single_trial(
         print(f"\n=== Running trial {trial_id} with seed {trial_seed} ===")
         print("Creating cortical column...")
 
-    # --------- Build network ----------
     column = CorticalColumn(column_id=0, config=config)
 
-    # add heterogeneity
-    for layer_name, layer in column.layers.items():
-        add_heterogeneity_to_layer(layer, config)
+    # add heterogeneity (this can be commented out)
+    # for layer_name, layer in column.layers.items():
+    #     add_heterogeneity_to_layer(layer, config)
 
     all_monitors = column.get_all_monitors()
 
-    # --------- Baseline run ----------
     column.network.run(baseline_ms * ms)
 
-    # --------- Stimulus setup ----------
+   
+    ##############  FEEDFORWARD STIM INPUT ##############
     w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
-    w_ext_NMDA = CONFIG['synapses']['Q']['EXT_NMDA']
     
 
     L4C = column.layers['L4C']
@@ -64,53 +52,67 @@ def run_single_trial(
 
     
     N_stim_E = int(cfg_L4C['poisson_inputs']['E']['N'])
-    stim_rate_E = 10*Hz  
+    stim_rate_E = 30*Hz  
 
 
     
     L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
-                             N=N_stim_E, rate=stim_rate_E, weight=w_ext_AMPA)
-    L4C_E_stimNMDA = PoissonInput(L4C_E_grp, 'gE_NMDA', 
-                             N=N_stim_E, rate=stim_rate_E, weight=w_ext_NMDA)
-    
+                             N=N_stim_E, rate=stim_rate_E, weight=w_ext_AMPA/2)
+  
     L4C_PV_grp = L4C.neuron_groups['PV']
     N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
-    stim_rate_PV = 3*Hz
+    stim_rate_PV = 30*Hz
     
     L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA', 
                               N=N_stim_PV, rate=stim_rate_PV, weight=w_ext_AMPA)
     
-    # L6 receives weaker but concurrent thalamic input
+    
+    
+    # L6 receives weaker halamic input
     L6 = column.layers['L6']
     cfg_L6 = CONFIG['layers']['L6']
     
     L6_E_grp = L6.neuron_groups['E']
     
     N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'] )
-    stim_rate_L6_E = 8*Hz
+    stim_rate_L6_E = 3*Hz
     
     L6_E_stim = PoissonInput(L6_E_grp, 'gE_AMPA',
-                             N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext_AMPA)
+                             N=N_stim_L6_E, rate=stim_rate_L6_E, weight=w_ext_AMPA/3)
     
-    N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'] )
-    stim_rate_L6_PV = 4*Hz
+
     
-    L6_PV_stim = PoissonInput(L6.neuron_groups['PV'], 'gE_AMPA',
-                              N=N_stim_L6_PV, rate=stim_rate_L6_PV, weight=w_ext_AMPA)
+
+    column.network.add(L4C_E_stimAMPA, L4C_PV_stim, L6_E_stim)
+
+    ##############################################
+
+    #  ############## CREATING FEEDBACK STIM INPUT ##############
+    # w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
     
- 
 
-    ################################################
+    # L6 = column.layers['L6']
+    # cfg_L6 = CONFIG['layers']['L6']
+    
+    # L6_SOM_grp = L6.neuron_groups['SOM']
 
-    column.network.add(L4C_E_stimAMPA, L4C_E_stimNMDA, L4C_PV_stim,  L6_E_stim, L6_PV_stim)
+    
+    # N_stim_SOM = int(cfg_L6['poisson_inputs']['SOM']['N'])
+    # stim_rate_SOM = 5*Hz  
 
-    # --------- Post-stimulus simulation ----------
+
+    
+    # L6_SOM_stimAMPA = PoissonInput(L6_SOM_grp, 'gE_AMPA', 
+    #                          N=N_stim_SOM, rate=stim_rate_SOM, weight=w_ext_AMPA)
+
+    
+    # column.network.add(L6_SOM_stimAMPA)
+
     column.network.run(post_ms * ms)
 
     if verbose:
         print("Simulation complete")
 
-    # --------- Organize monitors ----------
     spike_monitors = {}
     state_monitors = {}
     rate_monitors = {}
@@ -122,25 +124,7 @@ def run_single_trial(
         rate_monitors[layer_name] = {k: v for k, v in monitors.items() if 'rate' in k}
         neuron_groups[layer_name] = column.layers[layer_name].neuron_groups
 
-    # --------- LFP / bipolar / CSD ----------
-    electrode_positions = [
-        (0, 0, -0.94),
-        (0, 0, -0.79),
-        (0, 0, -0.64),
-        (0, 0, -0.49),
-        (0, 0, -0.34),
-        (0, 0, -0.19),
-        (0, 0, -0.04),
-        (0, 0, 0.10),
-        (0, 0, 0.26),
-        (0, 0, 0.40),
-        (0, 0, 0.56),
-        (0, 0, 0.70),
-        (0, 0, 0.86),
-        (0, 0, 1.00),
-        (0, 0, 1.16),
-        (0, 0, 1.30),
-    ]
+    electrode_positions = CONFIG['electrode_positions']
 
     total_sim_ms = baseline_ms + post_ms
 
@@ -156,8 +140,6 @@ def run_single_trial(
         sim_duration_ms=total_sim_ms,  
     )
 
-    # Optionally shift time so 0 = stimulus onset:
-    # time_array = time_array - baseline_ms
 
     if verbose:
         print("Computing CSD from monopolar LFP...")
@@ -177,7 +159,6 @@ def run_single_trial(
         electrode_positions,
     )
 
-    # --------- Extract rate time-series ----------
     rate_data = {}
     for layer_name, layer_rate_mons in rate_monitors.items():
         rate_data[layer_name] = {}
@@ -191,7 +172,6 @@ def run_single_trial(
                 "rate_hz": r_hz,
             }
 
-    # --------- Pack everything ----------
     data = {
         "trial_id": trial_id,
         "seed": trial_seed,
@@ -205,7 +185,7 @@ def run_single_trial(
         "rate_data": rate_data,
         "baseline_ms": baseline_ms,
         "post_ms": post_ms,
-        "stim_onset_ms": baseline_ms,   # for alignment later
+        "stim_onset_ms": baseline_ms,  
     }
 
     n_elec = len(lfp_signals)
@@ -269,13 +249,14 @@ def run_multiple_trials(
 
         if verbose:
             print(f"Saved trial {trial_id} to {fname}")
+
 if __name__ == "__main__":
     run_multiple_trials(
         CONFIG,
         n_trials=15,
-        baseline_ms=1000,
-        post_ms=500,
+        baseline_ms=2000,
+        post_ms=1500,
         fs=10000,
-        save_dir="results/lfp_trials_with_NMDA2",
+        save_dir="results/lfp_trial_3_secondes_config3_with_stronger_pv",
         verbose=True,
     )
