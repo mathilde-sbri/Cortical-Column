@@ -13,6 +13,10 @@ def main():
     b2.start_scope()
     b2.defaultclock.dt = CONFIG['simulation']['DT']
 
+    
+    baseline_time = 1000 # In ms, time during which to run the baseline simulation
+    stimuli_time = 500 # In ms, time during which to run the simulation after adding the stimuli
+
     print(" Creating cortical column...")
     column = CorticalColumn(column_id=0, config=CONFIG)
     
@@ -21,7 +25,7 @@ def main():
     
     all_monitors = column.get_all_monitors()
     
-    baseline_time = 1000
+    
     column.network.run(baseline_time*ms)
 
     ##############  FEEDFORWARD STIM INPUT ##############
@@ -91,7 +95,7 @@ def main():
     
     # column.network.add(L6_SOM_stimAMPA)
 
-    column.network.run(500*ms)
+    column.network.run(stimuli_time*ms)
 
     print("Simulation complete")
     
@@ -146,18 +150,18 @@ def main():
     #                                      channel_depths, time_range=(800, 1200))
 
 
-    fig_raster = plot_raster(spike_monitors, CONFIG['layers'])
+    fig_raster = plot_raster(spike_monitors, baseline_time, stimuli_time, CONFIG['layers'])
 
-    fig_power_lfp = plot_lfp_power_comparison(
-                        state_monitors, 
-                        CONFIG['layers'],
-                        baseline_time=baseline_time,
-                        pre_stim_duration=500,
-                        post_stim_duration=500
-                    )
+    # fig_power_lfp = plot_lfp_power_comparison(
+    #                     state_monitors, 
+    #                     CONFIG['layers'],
+    #                     baseline_time=baseline_time,
+    #                     pre_stim_duration=500,
+    #                     post_stim_duration=500
+    #                 )
 
 
-    fig_rate = plot_rate(rate_monitors, CONFIG['layers'], baseline_time,
+    fig_rate = plot_rate(rate_monitors, CONFIG['layers'], baseline_time, stimuli_time,
                  smooth_window=15*ms, 
                  ylim_max=80,      
                  show_stats=True)  

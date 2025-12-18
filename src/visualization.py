@@ -11,7 +11,7 @@ from scipy import signal as scipy_signal
 
 
 
-def plot_raster(spike_monitors, layer_configs, figsize=(15, 10)):
+def plot_raster(spike_monitors, baseline_time, stimuli_time, layer_configs, figsize=(15, 10)):
     fig, axes = plt.subplots(len(spike_monitors), 1, figsize=figsize)
     if len(spike_monitors) == 1:
         axes = [axes]
@@ -43,8 +43,8 @@ def plot_raster(spike_monitors, layer_configs, figsize=(15, 10)):
             ax.scatter(monitors['VIP_spikes'].t/second,
                         monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
                         color='gold', s=0.5, alpha=0.8, label="VIP")
-        
-        ax.set_xlim(0.3, 1.5)
+        x_lim = (baseline_time + stimuli_time)/1000
+        ax.set_xlim(0.3, x_lim)
         ax.set_ylabel('Neuron index')
         ax.set_title(f'{layer_name} Spike Raster Plot')
         ax.legend()
@@ -155,7 +155,7 @@ def plot_lfp_power_comparison(state_monitors, layer_configs, baseline_time=1000,
 
 
 
-def plot_rate(rate_monitors, layer_configs, stim_time, figsize=(10, 12), smooth_window=10*ms, 
+def plot_rate(rate_monitors, layer_configs, baseline_time, stim_time, figsize=(10, 12), smooth_window=10*ms, 
               ylim_max=None, show_stats=True):
     layer_names = list(layer_configs.keys()) if isinstance(layer_configs, dict) else list(rate_monitors.keys())
     n_layers = len(layer_names) if layer_names else len(rate_monitors)
