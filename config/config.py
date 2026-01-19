@@ -140,7 +140,7 @@ _LAYER_CONFIGS = {
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
 
         },
-        'input_rate': 5*Hz, 
+        'input_rate': 4*Hz, 
         'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},
         'coordinates' : {
             'x': (-0.15,0.15),
