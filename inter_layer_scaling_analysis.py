@@ -370,7 +370,7 @@ def plot_method_comparison(results, p_value=1.0, freq_max=100,
 
 def main():
 
-    n_points = 10
+    n_points = 20
     p_values = np.linspace(0, 1, n_points)
 
     print("="*70)
@@ -383,9 +383,9 @@ def main():
     results = run_parameter_sweep(
         p_values,
         baseline_time=800,  
-        sim_time=1200,     
+        sim_time=3000,     
         save_results=True,
-        output_file='inter_layer_sweep_results.pkl'
+        output_file='inter_layer_sweep_results_longer.pkl'
     )
 
     print("\nGenerating visualizations...")
