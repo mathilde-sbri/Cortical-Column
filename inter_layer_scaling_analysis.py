@@ -107,6 +107,9 @@ def run_simulation_for_p(p, baseline_time=800, sim_time=1200, random_seed=None, 
 
     del column
 
+    # Clear Brian2 device to prevent memory accumulation
+    # b2.device.reinit()
+
     return {
         'freq_mazzoni': freq_mazzoni,
         'psd_mazzoni': psd_mazzoni,
@@ -367,10 +370,9 @@ def plot_method_comparison(results, p_value=1.0, freq_max=100,
 
     return fig, ax
 
-
 def main():
 
-    n_points = 10
+    n_points = 20
     p_values = np.linspace(0, 1, n_points)
 
     print("="*70)

@@ -40,7 +40,11 @@ def plot_raster(spike_monitors, baseline_time, stimuli_time, layer_configs, figs
                             color='red', s=0.5, alpha=0.8, label="PV")
             ########TO IMPROVE###############
         if 'VIP_spikes' in monitors:
-            ax.scatter(monitors['VIP_spikes'].t/second,
+            if layer_name == 'L1':
+                ax.scatter(monitors['VIP_spikes'].t/second, monitors['VIP_spikes'].i,
+                        color='gold', s=0.5, alpha=0.8, label="VIP")
+            else :
+                ax.scatter(monitors['VIP_spikes'].t/second,
                         monitors['VIP_spikes'].i + config['neuron_counts']['E'] + config['neuron_counts']['SOM'] + config['neuron_counts']['PV'],
                         color='gold', s=0.5, alpha=0.8, label="VIP")
         x_lim = (baseline_time + stimuli_time)/1000
@@ -76,35 +80,43 @@ def plot_lfp(state_monitors, layer_configs, figsize=(15, 12)):
 
 
 def plot_lfp_power_comparison(state_monitors, layer_configs, baseline_time=1000,
-                               pre_stim_duration=500, post_stim_duration=500,
-                               figsize=(12, 10)):
-    
+                               pre_stim_duration=1000, post_stim_duration=1000,
+                               transient_skip=500, figsize=(12, 10)):
+    """
+    Plot power spectrum comparison before and after stimulation.
+
+    Parameters
+    ----------
+    transient_skip : float
+        Time in ms to skip after stimulus onset to avoid transient effects.
+    """
     fig, axes = plt.subplots(len(state_monitors), 1, figsize=figsize)
     if len(state_monitors) == 1:
         axes = [axes]
-    
+
     colors = ['b', 'g', 'purple', 'orange', 'red']
-    
+
     for i, (layer_name, monitors) in enumerate(state_monitors.items()):
         if 'E_state' in monitors:
             monitor = monitors['E_state']
-            
+
             layer_cfg = layer_configs[layer_name]
             neuron_params = {
-                'E_E': 0.0,     
-                'E_I': -70.0,  
+                'E_E': 0.0,
+                'E_I': -70.0,
                 'g_L': layer_cfg.get('g_L', 10.0)
             }
-            
+
             lfp_full, time_array = calculate_lfp_mazzoni(
                 monitor, neuron_params, method='weighted'
             )
-            
+
             dt = time_array[1] - time_array[0]
             pre_start_idx = int((baseline_time - pre_stim_duration) / dt)
             pre_end_idx = int(baseline_time / dt)
-            post_start_idx = int(baseline_time / dt)
-            post_end_idx = int((baseline_time + post_stim_duration) / dt)
+            # Skip transient period after stimulus onset
+            post_start_idx = int((baseline_time + transient_skip) / dt)
+            post_end_idx = int((baseline_time + transient_skip + post_stim_duration) / dt)
             
             lfp_pre = lfp_full[pre_start_idx:pre_end_idx]
             lfp_post = lfp_full[post_start_idx:post_end_idx]
@@ -387,7 +399,121 @@ def plot_lfp_comparison(lfp_signals, bipolar_signals, time_array, electrode_posi
     plt.tight_layout()
     return fig
 
-def plot_bipolar_power_spectra(bipolar_signals, channel_labels, channel_depths, time_array, 
+def plot_lfp_power_comparison_kernel(lfp_signals, time_array, electrode_positions,
+                                      baseline_time=1000, pre_stim_duration=1000,
+                                      post_stim_duration=1000, transient_skip=500,
+                                      fs=10000, fmax=100, figsize=(12, 8)):
+
+    n_electrodes = len(lfp_signals)
+
+    fig, axes = plt.subplots(n_electrodes, 1, figsize=figsize, sharex=True)
+    if n_electrodes == 1:
+        axes = [axes]
+
+    dt = time_array[1] - time_array[0]
+
+    pre_start_idx = int((baseline_time - pre_stim_duration) / dt)
+    pre_end_idx = int(baseline_time / dt)
+    post_start_idx = int((baseline_time + transient_skip) / dt)
+    post_end_idx = int((baseline_time + transient_skip + post_stim_duration) / dt)
+
+    for i, (elec_idx, lfp) in enumerate(lfp_signals.items()):
+        ax = axes[i]
+        ex, ey, ez = electrode_positions[elec_idx]
+
+        lfp_pre = lfp[pre_start_idx:pre_end_idx]
+        lfp_post = lfp[post_start_idx:post_end_idx]
+
+        nperseg = min(1024, len(lfp_pre) // 4)
+        freq_pre, psd_pre = scipy_signal.welch(lfp_pre, fs=fs, nperseg=nperseg, window='hann')
+        freq_post, psd_post = scipy_signal.welch(lfp_post, fs=fs, nperseg=nperseg, window='hann')
+
+        freq_mask = freq_pre <= fmax
+
+        ax.plot(freq_pre[freq_mask], psd_pre[freq_mask], 'b-', linewidth=1.5,
+                label='Pre-stim', alpha=0.9)
+        ax.plot(freq_post[freq_mask], psd_post[freq_mask], 'r--', linewidth=1.5,
+                label='Post-stim', alpha=0.9)
+
+        peak_idx_pre = np.argmax(psd_pre[freq_mask])
+        peak_idx_post = np.argmax(psd_post[freq_mask])
+
+        ax.axvline(freq_pre[freq_mask][peak_idx_pre], color='b', linestyle=':', alpha=0.5,
+                   label=f'Pre peak: {freq_pre[freq_mask][peak_idx_pre]:.1f} Hz')
+        ax.axvline(freq_post[freq_mask][peak_idx_post], color='r', linestyle=':', alpha=0.5,
+                   label=f'Post peak: {freq_post[freq_mask][peak_idx_post]:.1f} Hz')
+
+        ax.set_ylabel(f'Elec {i}\nz={ez:.2f}mm', fontsize=9)
+        ax.set_yscale('log')
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=8, loc='upper right')
+
+    axes[-1].set_xlabel('Frequency (Hz)', fontsize=12)
+    axes[0].set_title('LFP Power Spectrum: Pre vs Post Stimulation (Kernel Method)',
+                      fontsize=12, fontweight='bold')
+
+    plt.tight_layout()
+    return fig
+
+
+def plot_bipolar_power_comparison_kernel(bipolar_signals, channel_labels, channel_depths, time_array,
+                                          baseline_time=1000, pre_stim_duration=1000,
+                                          post_stim_duration=1000, transient_skip=500,
+                                          fs=10000, fmax=100, figsize=(14, 20)):
+    n_channels = len(bipolar_signals)
+
+    fig, axes = plt.subplots(n_channels, 1, figsize=figsize, sharex=True)
+    if n_channels == 1:
+        axes = [axes]
+
+    dt = time_array[1] - time_array[0]
+
+    pre_start_idx = int((baseline_time - pre_stim_duration) / dt)
+    pre_end_idx = int(baseline_time / dt)
+    post_start_idx = int((baseline_time + transient_skip) / dt)
+    post_end_idx = int((baseline_time + transient_skip + post_stim_duration) / dt)
+
+    for i, (ch_idx, lfp) in enumerate(bipolar_signals.items()):
+        ax = axes[i]
+        depth = channel_depths[ch_idx]
+        label = channel_labels[ch_idx]
+
+        lfp_pre = lfp[pre_start_idx:pre_end_idx]
+        lfp_post = lfp[post_start_idx:post_end_idx]
+
+        nperseg = min(1024, len(lfp_pre) // 4)
+        freq_pre, psd_pre = scipy_signal.welch(lfp_pre, fs=fs, nperseg=nperseg, window='hann')
+        freq_post, psd_post = scipy_signal.welch(lfp_post, fs=fs, nperseg=nperseg, window='hann')
+
+        freq_mask = freq_pre <= fmax
+
+        ax.plot(freq_pre[freq_mask], psd_pre[freq_mask], 'b-', linewidth=1.5,
+                label='Pre-stim', alpha=0.9)
+        ax.plot(freq_post[freq_mask], psd_post[freq_mask], 'r--', linewidth=1.5,
+                label='Post-stim', alpha=0.9)
+
+        peak_idx_pre = np.argmax(psd_pre[freq_mask])
+        peak_idx_post = np.argmax(psd_post[freq_mask])
+
+        ax.axvline(freq_pre[freq_mask][peak_idx_pre], color='b', linestyle=':', alpha=0.5,
+                   label=f'Pre peak: {freq_pre[freq_mask][peak_idx_pre]:.1f} Hz')
+        ax.axvline(freq_post[freq_mask][peak_idx_post], color='r', linestyle=':', alpha=0.5,
+                   label=f'Post peak: {freq_post[freq_mask][peak_idx_post]:.1f} Hz')
+
+        ax.set_ylabel(f'{label}\nz={depth:.2f}mm', fontsize=9)
+        ax.set_yscale('log')
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=7, loc='upper right')
+
+    axes[-1].set_xlabel('Frequency (Hz)', fontsize=12)
+    axes[0].set_title('Bipolar LFP Power Spectrum: Pre vs Post Stimulation',
+                      fontsize=12, fontweight='bold')
+
+    plt.tight_layout()
+    return fig
+
+
+def plot_bipolar_power_spectra(bipolar_signals, channel_labels, channel_depths, time_array,
                                fs=10000, fmax=100, ncols=3, figsize=None):
  
     freq, psds = compute_bipolar_power_spectrum(

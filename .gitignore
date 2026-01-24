@@ -10,3 +10,4 @@ first_sim.py
 /full_trials
 src/cleo_plots.py
 .DS_Store
+/venv

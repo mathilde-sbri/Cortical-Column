@@ -83,10 +83,54 @@ def compute_power_spectrum(lfp_signal, fs=10000, nperseg=None):
 
     if nperseg is None:
         nperseg = min(4096, len(lfp_signal) // 4)
-    
-    freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg, 
+
+    freq, psd = welch(lfp_signal, fs=fs, nperseg=nperseg,
                     noverlap=nperseg//2, window='hann')
     return freq, psd
+
+
+def compute_normalized_fft_magnitude(lfp_signal, fs=10000):
+    """
+    Compute normalized FFT magnitude spectrum following the paper's method.
+
+    The paper describes:
+    1. Remove DC component: x(t) - mean(x(t))
+    2. Normalize to unit energy: x_hat(t) = (x(t) - mean) / sqrt(integral of |x(t) - mean|^2)
+    3. Compute FFT magnitude: |F[x_hat(t)]|
+
+    Parameters
+    ----------
+    lfp_signal : array
+        LFP signal to analyze.
+    fs : float
+        Sampling frequency in Hz.
+
+    Returns
+    -------
+    freq : array
+        Frequency values in Hz.
+    magnitude : array
+        Normalized FFT magnitude spectrum.
+    """
+    # Remove DC component
+    signal_centered = lfp_signal - np.mean(lfp_signal)
+
+    # Normalize to unit energy
+    energy = np.sqrt(np.sum(signal_centered**2))
+    if energy > 0:
+        signal_normalized = signal_centered / energy
+    else:
+        signal_normalized = signal_centered
+
+    # Compute FFT magnitude
+    n = len(signal_normalized)
+    fft_result = rfft(signal_normalized)
+    magnitude = np.abs(fft_result)
+
+    # Compute frequency axis
+    freq = rfftfreq(n, d=1.0/fs)
+
+    return freq, magnitude
     
 
 def peak_frequency_track(f_hz, Sxx, f_gamma=(20, 80)):

@@ -29,7 +29,7 @@ csv_layer_configs, _INTER_LAYER_CONNECTIONS, _INTER_LAYER_CONDUCTANCES = load_co
 )
 
 
-INTRA_LAYER_PROB_SCALE = 0.90  
+INTRA_LAYER_PROB_SCALE = 1.0
 INTRA_LAYER_COND_SCALE = 1.0  
 
 INTRA_LAYER_PROB_SCALE_E = 1.0  
@@ -71,7 +71,20 @@ for layer in csv_layer_configs:
 
 
 _LAYER_CONFIGS = {
-   
+    'L1': {
+        'connection_prob': csv_layer_configs['L1']['connection_prob'],
+        'conductance': csv_layer_configs['L1']['conductance'],
+        'poisson_inputs': {
+            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 50},
+        },
+        'input_rate': 9*Hz,
+        'neuron_counts': {'VIP': 40},
+        'coordinates' : {
+            'x': (-0.15,0.15),
+            'y': (-0.15,0.15),
+            'z': (1.1, 1.2),
+        },
+    },
 
     'L23': {
         'connection_prob': csv_layer_configs['L23']['connection_prob'],
