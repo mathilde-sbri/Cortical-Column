@@ -2,7 +2,7 @@ import numpy as np
 import brian2 as b2
 from brian2 import *
 from brian2tools import *
-from config.config import CONFIG
+from config.config2 import CONFIG
 from src.column import CorticalColumn
 from src.visualization import *
 from src.analysis import *
@@ -14,8 +14,8 @@ def main():
     b2.defaultclock.dt = CONFIG['simulation']['DT']
 
     
-    baseline_time = 2000 # In ms, time during which to run the baseline simulation
-    stimuli_time = 1500 # In ms, time during which to run the simulation after adding the stimuli
+    baseline_time = 1000 # In ms, time during which to run the baseline simulation
+    stimuli_time = 500 # In ms, time during which to run the simulation after adding the stimuli
 
     print(" Creating cortical column...")
     column = CorticalColumn(column_id=0, config=CONFIG)
@@ -235,44 +235,44 @@ def main():
 
     electrode_positions = CONFIG['electrode_positions']
 
-    print("Computing LFP using kernel method...")
-    lfp_signals, time_array = calculate_lfp_kernel_method(
-        spike_monitors,
-        neuron_groups,
-        CONFIG['layers'],
-        electrode_positions,
-        fs=10000,
-        sim_duration_ms=baseline_time + stimuli_time
-    )
+    # print("Computing LFP using kernel method...")
+    # lfp_signals, time_array = calculate_lfp_kernel_method(
+    #     spike_monitors,
+    #     neuron_groups,
+    #     CONFIG['layers'],
+    #     electrode_positions,
+    #     fs=10000,
+    #     sim_duration_ms=baseline_time + stimuli_time
+    # )
 
-    print("Computing bipolar LFP...")
-    bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
-        lfp_signals,
-        electrode_positions
-    )
+    # print("Computing bipolar LFP...")
+    # bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
+    #     lfp_signals,
+    #     electrode_positions
+    # )
 
     fig_raster = plot_raster(spike_monitors, baseline_time, stimuli_time, CONFIG['layers'])
 
-    fig_power_lfp = plot_lfp_power_comparison_kernel(
-                        lfp_signals,
-                        time_array,
-                        electrode_positions,
-                        baseline_time=baseline_time,
-                        pre_stim_duration=1000,
-                        post_stim_duration=1000,
-                        transient_skip=500
-                    )
+    # fig_power_lfp = plot_lfp_power_comparison_kernel(
+    #                     lfp_signals,
+    #                     time_array,
+    #                     electrode_positions,
+    #                     baseline_time=baseline_time,
+    #                     pre_stim_duration=1000,
+    #                     post_stim_duration=1000,
+    #                     transient_skip=500
+    #                 )
 
-    fig_power_bipolar = plot_bipolar_power_comparison_kernel(
-                        bipolar_signals,
-                        channel_labels,
-                        channel_depths,
-                        time_array,
-                        baseline_time=baseline_time,
-                        pre_stim_duration=1000,
-                        post_stim_duration=1000,
-                        transient_skip=500
-                    )
+    # fig_power_bipolar = plot_bipolar_power_comparison_kernel(
+    #                     bipolar_signals,
+    #                     channel_labels,
+    #                     channel_depths,
+    #                     time_array,
+    #                     baseline_time=baseline_time,
+    #                     pre_stim_duration=1000,
+    #                     post_stim_duration=1000,
+    #                     transient_skip=500
+    #                 )
 
 
     fig_rate = plot_rate(rate_monitors, CONFIG['layers'], baseline_time, stimuli_time,

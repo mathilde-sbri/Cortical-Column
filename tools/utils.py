@@ -6,7 +6,7 @@ def load_connectivity_from_csv(conn_prob_file, cond_ampa_file, cond_nmda_file):
     conn_prob_df = pd.read_csv(conn_prob_file, index_col=0)
     cond_ampa_df = pd.read_csv(cond_ampa_file, index_col=0)
     cond_nmda_df = pd.read_csv(cond_nmda_file, index_col=0)
-    layers = ['L1', 'L23', 'L4AB', 'L4C', 'L5', 'L6']
+    layers = [ 'L23', 'L4AB', 'L4C', 'L5', 'L6']
     cell_types = ['E', 'PV', 'SOM', 'VIP']
     l1_cell_types = ['VIP']
 
