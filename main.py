@@ -177,7 +177,7 @@ def main():
     L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
                                   N=N_stim_E, 
                                   rate=stim_rate_E, 
-                                  weight=w_ext_AMPA/2)  
+                                  weight=w_ext_AMPA)  
     
     L4C_PV_grp = L4C.neuron_groups['PV']
     N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])

@@ -3,7 +3,7 @@ import os
 import numpy as np
 import brian2 as b2
 from brian2 import *
-from config.config import CONFIG
+from config.config2 import CONFIG
 from src.column import CorticalColumn
 from src.analysis import calculate_lfp_kernel_method, compute_power_spectrum
 import copy
@@ -321,7 +321,8 @@ if __name__ == "__main__":
     # For backwards compatibility, 2-tuple keys default to AMPA:
     #   ('L1', 'VIP'): 1.0  is equivalent to  ('L1', 'VIP', 'AMPA'): 1.0
     targets = {
-        ('L23', 'E', 'SOM'): 1.0,
+        ('L4C', 'E', 'AMPA'): 0.5,
+        ('L4C', 'PV', 'AMPA'): 1.0,
     }
 
     result_path = run_rate_sweep(
@@ -331,7 +332,7 @@ if __name__ == "__main__":
         baseline_ms=1000,
         stim_ms=1500,
         fs=10000,
-        save_dir="results/input_sweeps",
+        save_dir="results/input_sweeps2",
         verbose=True,
     )
 

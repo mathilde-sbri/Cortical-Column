@@ -1,8 +1,8 @@
 from brian2 import *
 import numpy as np
-
+import pandas as pd
 from collections import defaultdict
-from tools.utils import *
+
 
 tau_e_AMPA = 5*ms
 tau_e_NMDA = 100*ms
@@ -16,87 +16,141 @@ ee      = 0.*mV
 ei      = -80.*mV
 t_ref   = 5*ms
 
+alpha_g = 1.0
+beta_p  = 1.0
 
 def g_NMDA(v_mV):
     return 1.0 / (1.0 + 0.28 * np.exp(-0.062 * v_mV))
+
+
+def load_connectivity_from_csv(conn_prob_file, cond_ampa_file, cond_nmda_file):
+    """
+    Load connectivity matrices from CSV files.
+    Returns both intra-layer configs and inter-layer connection dictionaries.
+    """
+    conn_prob_df = pd.read_csv(conn_prob_file, index_col=0)
+    cond_ampa_df = pd.read_csv(cond_ampa_file, index_col=0)
+    cond_nmda_df = pd.read_csv(cond_nmda_file, index_col=0)
+    
+    layers = ['L23', 'L4AB', 'L4C', 'L5', 'L6']
+    cell_types = ['E', 'PV', 'SOM', 'VIP']
+    
+    layer_name_map = {
+        'L23': 'L23',
+        'L4AB': 'L4AB', 
+        'L4C': 'L4C',
+        'L5': 'L5',
+        'L6': 'L6'
+    }
+    
+    layer_configs = {}
+    inter_layer_connections = {}
+    inter_layer_conductances = {}
+    
+    for layer in layers:
+
+        connection_prob = {}
+        conductance = {}
+        
+        for src_type in cell_types:
+            for tgt_type in cell_types:
+                src_col = f'{src_type}_{layer}'
+                tgt_col = f'{tgt_type}_{layer}'
+                
+                prob_val = conn_prob_df.loc[src_col, tgt_col]
+                if prob_val > 0:
+                    conn_key = f'{src_type}_{tgt_type}'
+                    connection_prob[conn_key] = prob_val
+                
+                # Conductances
+                if src_type == 'E':
+                    ampa_val = cond_ampa_df.loc[src_col, tgt_col]
+                    nmda_val = cond_nmda_df.loc[src_col, tgt_col]
+                    
+                    if ampa_val > 0:
+                        cond_key = f'{src_type}_{tgt_type}_AMPA'
+                        conductance[cond_key] = ampa_val
+                    
+                    if nmda_val > 0:
+                        cond_key = f'{src_type}_{tgt_type}_NMDA'
+                        conductance[cond_key] = nmda_val
+                else:
+                    ampa_val = cond_ampa_df.loc[src_col, tgt_col]
+                    if ampa_val > 0:
+                        cond_key = f'{src_type}_{tgt_type}'
+                        conductance[cond_key] = ampa_val
+        
+        layer_configs[layer] = {
+            'connection_prob': connection_prob,
+            'conductance': conductance
+        }
+    
+
+    for src_layer in layers:
+        for tgt_layer in layers:
+            if src_layer == tgt_layer:
+                continue  
+            
+            conn_dict = {}
+            cond_dict = {}
+            
+            for src_type in cell_types:
+                for tgt_type in cell_types:
+                    src_col = f'{src_type}_{src_layer}'
+                    tgt_col = f'{tgt_type}_{tgt_layer}'
+                    
+                    prob_val = conn_prob_df.loc[src_col, tgt_col]
+                    
+                    if prob_val > 0:
+                        conn_key = f'{src_type}_{tgt_type}'
+                        conn_dict[conn_key] = prob_val
+                        
+                        if src_type == 'E':
+                            ampa_val = cond_ampa_df.loc[src_col, tgt_col]
+                            nmda_val = cond_nmda_df.loc[src_col, tgt_col]
+                            
+                            if ampa_val > 0:
+                                cond_dict[f'{src_type}_{tgt_type}_AMPA'] = ampa_val
+                            if nmda_val > 0:
+                                cond_dict[f'{src_type}_{tgt_type}_NMDA'] = nmda_val
+                        else:
+                            ampa_val = cond_ampa_df.loc[src_col, tgt_col]
+                            if ampa_val > 0:
+                                cond_dict[f'{src_type}_{tgt_type}'] = ampa_val
+            
+            if conn_dict:
+                inter_layer_connections[(src_layer, tgt_layer)] = conn_dict
+                inter_layer_conductances[(src_layer, tgt_layer)] = cond_dict
+    
+    return layer_configs, inter_layer_connections, inter_layer_conductances
+
 
 
 
 csv_layer_configs, _INTER_LAYER_CONNECTIONS, _INTER_LAYER_CONDUCTANCES = load_connectivity_from_csv(
     'config/connection_probabilities2.csv',
     'config/conductances_AMPA2.csv',
-    'config/conductances_NMDA2.csv',
+    'config/conductances_NMDA2.csv'
 )
 
 
-INTRA_LAYER_PROB_SCALE = 1.0
-INTRA_LAYER_COND_SCALE = 1.0  
-
-INTRA_LAYER_PROB_SCALE_E = 1.0  
-INTRA_LAYER_PROB_SCALE_I = 1.0  
-
-
-
-INTER_LAYER_PROB_SCALE_E = 0.5  
-INTER_LAYER_PROB_SCALE_I = 0.5
-
-INTER_LAYER_COND_SCALE_E = 1.0  
-INTER_LAYER_COND_SCALE_I = 1.0  
-
-
-for layer_pair in _INTER_LAYER_CONNECTIONS:
-    for conn_key in _INTER_LAYER_CONNECTIONS[layer_pair]:
-        if conn_key.startswith('E_'): 
-            _INTER_LAYER_CONNECTIONS[layer_pair][conn_key] *= INTER_LAYER_PROB_SCALE_E
-        else:   
-            _INTER_LAYER_CONNECTIONS[layer_pair][conn_key] *= INTER_LAYER_PROB_SCALE_I
-
-for layer_pair in _INTER_LAYER_CONDUCTANCES:
-    for cond_key in _INTER_LAYER_CONDUCTANCES[layer_pair]:
-        if conn_key.startswith('E_'): 
-            _INTER_LAYER_CONDUCTANCES[layer_pair][cond_key] *= INTER_LAYER_COND_SCALE_E
-        else :
-            _INTER_LAYER_CONDUCTANCES[layer_pair][cond_key] *= INTER_LAYER_COND_SCALE_I
-
-for layer in csv_layer_configs:
-    for conn_key in csv_layer_configs[layer]['connection_prob']:
-        if conn_key.startswith('E_'): 
-            csv_layer_configs[layer]['connection_prob'][conn_key] *= INTRA_LAYER_PROB_SCALE_E
-        else :
-            csv_layer_configs[layer]['connection_prob'][conn_key] *= INTRA_LAYER_PROB_SCALE_I
-    
-    for cond_key in csv_layer_configs[layer]['conductance']:
-        csv_layer_configs[layer]['conductance'][cond_key] *= INTRA_LAYER_COND_SCALE
-
-
-
 _LAYER_CONFIGS = {
-    # 'L1': {
-    #     'connection_prob': csv_layer_configs['L1']['connection_prob'],
-    #     'conductance': csv_layer_configs['L1']['conductance'],
-    #     'poisson_inputs': {
-    #         'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 50},
-    #     },
-    #     'input_rate': 9*Hz,
-    #     'neuron_counts': {'VIP': 40},
-    #     'coordinates' : {
-    #         'x': (-0.15,0.15),
-    #         'y': (-0.15,0.15),
-    #         'z': (1.1, 1.2),
-    #     },
-    # },
+   
 
     'L23': {
         'connection_prob': csv_layer_configs['L23']['connection_prob'],
         'conductance': csv_layer_configs['L23']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 25},
-            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 15},
-            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 15},
-
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 65},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
+            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
+            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
+            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 65},
+            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
+            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
         },
-        'input_rate': 5*Hz,
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -105,17 +159,20 @@ _LAYER_CONFIGS = {
         },
     },
 
-       'L4AB': {
+    'L4AB': {
         'connection_prob': csv_layer_configs['L4AB']['connection_prob'],
         'conductance': csv_layer_configs['L4AB']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 55},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
-            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20}, 
-            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-   
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
+            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 24}, 
+            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 24},
+            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
+            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 24},
+            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 18},
         },
-        'input_rate': 4*Hz,
+        'input_rate': 8*Hz,
         'neuron_counts': {'E': 2720, 'PV': 408, 'SOM': 204, 'VIP': 68},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -129,12 +186,15 @@ _LAYER_CONFIGS = {
         'conductance': csv_layer_configs['L4C']['conductance'],
         'poisson_inputs': {
             'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
- 
+            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
+            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
+            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
         },
-        'input_rate': 5*Hz,
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 3192, 'PV': 365, 'SOM': 182, 'VIP': 61},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -148,12 +208,15 @@ _LAYER_CONFIGS = {
         'conductance': csv_layer_configs['L5']['conductance'],
         'poisson_inputs': {
             'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-
+            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
+            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
+            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
         },
-        'input_rate': 4*Hz, 
+        'input_rate': 8*Hz,
         'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -166,13 +229,16 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L6']['connection_prob'],
         'conductance': csv_layer_configs['L6']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-     
+            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 28},
+            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 28},
+            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
+            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 28},
+            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 18},
         },
-        'input_rate': 4*Hz,
+        'input_rate': 10*Hz,
         'neuron_counts': {'E': 2040, 'PV': 187, 'SOM': 137, 'VIP': 36},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -180,8 +246,6 @@ _LAYER_CONFIGS = {
             'z': (-0.62, -0.34),
         }
     },
-
-  
 }
 
 
@@ -206,7 +270,7 @@ CONFIG = {
 
         IsynE_AMPA = gE_AMPA*(Ee - v) : amp
         IsynE_NMDA = gE_NMDA*(Ee - v)/(1 + 0.28*exp(-0.062*v/mV)) : amp
-        IsynE      = IsynE_AMPA + IsynE_NMDA  : amp
+        IsynE      = IsynE_AMPA + IsynE_NMDA : amp
 
         IsynIPV    = gPV*(Ei - v) : amp
         IsynISOM   = gSOM*(Ei - v) : amp
@@ -247,7 +311,7 @@ CONFIG = {
 
         IsynE_AMPA = gE_AMPA*(Ee - v) : amp
         IsynE_NMDA = gE_NMDA*(Ee - v)/(1 + 0.28*exp(-0.062*v/mV)) : amp
-        IsynE      = IsynE_AMPA + IsynE_NMDA  : amp
+        IsynE      = IsynE_AMPA + IsynE_NMDA : amp
 
         IsynIPV    = gPV*(Ei - v) : amp
         IsynISOM   = gSOM*(Ei - v) : amp
@@ -288,7 +352,7 @@ CONFIG = {
 
         IsynE_AMPA = gE_AMPA*(Ee - v) : amp
         IsynE_NMDA = gE_NMDA*(Ee - v)/(1 + 0.28*exp(-0.062*v/mV)) : amp
-        IsynE      = IsynE_AMPA + IsynE_NMDA  : amp
+        IsynE      = IsynE_AMPA + IsynE_NMDA : amp
 
         IsynIPV    = gPV*(Ei - v) : amp
         IsynISOM   = gSOM*(Ei - v) : amp
@@ -329,7 +393,7 @@ CONFIG = {
 
         IsynE_AMPA = gE_AMPA*(Ee - v) : amp
         IsynE_NMDA = gE_NMDA*(Ee - v)/(1 + 0.28*exp(-0.062*v/mV)) : amp
-        IsynE      = IsynE_AMPA + IsynE_NMDA  : amp
+        IsynE      = IsynE_AMPA + IsynE_NMDA : amp
 
         IsynIPV    = gPV*(Ei - v) : amp
         IsynISOM   = gSOM*(Ei - v) : amp
@@ -420,6 +484,7 @@ CONFIG = {
 
     'time_constants': {
         'E_AMPA': tau_e_AMPA,
+        'E_NMDA': tau_e_NMDA,
         'I_PV':   tau_i_PV,
         'I_SOM':  tau_i_SOM,
         'I_VIP':  tau_i_VIP,
@@ -427,7 +492,7 @@ CONFIG = {
 
     'synapses': {
         'Q': {
-            'EXT_AMPA': 1.25*nS,
+            'EXT_AMPA': 0.4*nS,
             'EXT_NMDA': 0.15*nS,
         },
     },
@@ -436,7 +501,6 @@ CONFIG = {
     
     'inter_layer_connections': _INTER_LAYER_CONNECTIONS,
     'inter_layer_conductances': _INTER_LAYER_CONDUCTANCES,
-
     'electrode_positions' : [
         (0, 0, -0.94),
         (0, 0, -0.79),
