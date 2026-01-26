@@ -2,7 +2,7 @@ import os
 import numpy as np
 import brian2 as b2
 from brian2 import *
-from config.config import CONFIG
+from config.config2 import CONFIG
 from src.column import CorticalColumn
 from src.visualization import *
 from src.analysis import *
@@ -102,20 +102,36 @@ def run_single_trial(
     #         weight=w_K
     # )
 
-    # L23 = column.layers['L23']
-    # L23_SOM = L23.neuron_groups['SOM']
-
-    # L23_SOM_baseline = PoissonInput(
-    #     L23_SOM,
-    #     'gE_AMPA',
-    #     N=15,
-    #     rate=3*Hz,
-    #     weight=w_K
-    # )
-
-    # column.network.add(L1_K_baseline, L23_SOM_baseline)
     column.network.run(baseline_ms * ms)
 
+    L23 = column.layers['L23']
+    L23_SOM = L23.neuron_groups['SOM']
+
+    L23_SOM_baseline = PoissonInput(
+        L23_SOM,
+        'gE_AMPA',
+        N=15,
+        rate=3*Hz,
+        weight=w_ext_AMPA
+    )
+
+    column.network.add( L23_SOM_baseline)
+
+        
+    
+    # L4C = column.layers['L4C']
+    # cfg_L4C = CONFIG['layers']['L4C']
+    # L6 = column.layers['L6']
+    # cfg_L6 = CONFIG['layers']['L6']
+    
+    # L4C_VIP_grp = L4C.neuron_groups['VIP']
+    # N_stim_VIP = int(cfg_L4C['poisson_inputs']['VIP']['N'])
+    # stim_rate_VIP = 10*Hz  
+    # L4C_VIP_stimAMPA = PoissonInput(L4C_VIP_grp, 'gE_AMPA', 
+    #                               N=N_stim_VIP, 
+    #                               rate=stim_rate_VIP, 
+    #                               weight=w_ext_AMPA)  
+    # column.network.add(L4C_VIP_stimAMPA)
     
     
     # L4C = column.layers['L4C']
@@ -150,32 +166,32 @@ def run_single_trial(
     
     # column.network.add(L4C_E_stimAMPA, L4C_PV_stim, L6_E_stim)
 
-    #K STREAM
-    w_K = w_ext_AMPA / 5
+    # #K STREAM
+    # w_K = w_ext_AMPA / 5
 
-    L1 = column.layers['L1']
-    L1_INH = L1.neuron_groups['VIP']
+    # L1 = column.layers['L1']
+    # L1_INH = L1.neuron_groups['VIP']
 
-    L1_K_baseline = PoissonInput(
-            L1_INH,
-            'gE_AMPA',
-            N=20,
-            rate=3*Hz,
-            weight=w_K
-    )
+    # L1_K_baseline = PoissonInput(
+    #         L1_INH,
+    #         'gE_AMPA',
+    #         N=20,
+    #         rate=3*Hz,
+    #         weight=w_K
+    # )
 
-    L23 = column.layers['L23']
-    L23_SOM = L23.neuron_groups['SOM']
+    # L23 = column.layers['L23']
+    # L23_SOM = L23.neuron_groups['SOM']
 
-    L23_SOM_baseline = PoissonInput(
-        L23_SOM,
-        'gE_AMPA',
-        N=15,
-        rate=3*Hz,
-        weight=w_K
-    )
+    # L23_SOM_baseline = PoissonInput(
+    #     L23_SOM,
+    #     'gE_AMPA',
+    #     N=15,
+    #     rate=3*Hz,
+    #     weight=w_K
+    # )
 
-    column.network.add(L1_K_baseline, L23_SOM_baseline)
+    # column.network.add(L1_K_baseline, L23_SOM_baseline)
 
     column.network.run(post_ms * ms)
 
@@ -326,6 +342,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/only_K_STREAM_trials",
+        save_dir="results/new_conductances_SOM_L23",
         verbose=True,
     )

@@ -71,20 +71,20 @@ for layer in csv_layer_configs:
 
 
 _LAYER_CONFIGS = {
-    'L1': {
-        'connection_prob': csv_layer_configs['L1']['connection_prob'],
-        'conductance': csv_layer_configs['L1']['conductance'],
-        'poisson_inputs': {
-            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 50},
-        },
-        'input_rate': 9*Hz,
-        'neuron_counts': {'VIP': 40},
-        'coordinates' : {
-            'x': (-0.15,0.15),
-            'y': (-0.15,0.15),
-            'z': (1.1, 1.2),
-        },
-    },
+    # 'L1': {
+    #     'connection_prob': csv_layer_configs['L1']['connection_prob'],
+    #     'conductance': csv_layer_configs['L1']['conductance'],
+    #     'poisson_inputs': {
+    #         'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 50},
+    #     },
+    #     'input_rate': 9*Hz,
+    #     'neuron_counts': {'VIP': 40},
+    #     'coordinates' : {
+    #         'x': (-0.15,0.15),
+    #         'y': (-0.15,0.15),
+    #         'z': (1.1, 1.2),
+    #     },
+    # },
 
     'L23': {
         'connection_prob': csv_layer_configs['L23']['connection_prob'],

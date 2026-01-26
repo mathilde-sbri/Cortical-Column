@@ -14,8 +14,8 @@ def main():
     b2.defaultclock.dt = CONFIG['simulation']['DT']
 
     
-    baseline_time = 1000 # In ms, time during which to run the baseline simulation
-    stimuli_time = 500 # In ms, time during which to run the simulation after adding the stimuli
+    baseline_time = 2000 # In ms, time during which to run the baseline simulation
+    stimuli_time = 1500 # In ms, time during which to run the simulation after adding the stimuli
 
     print(" Creating cortical column...")
     column = CorticalColumn(column_id=0, config=CONFIG)
@@ -165,6 +165,7 @@ def main():
     # column.network.add(L1_K_baseline, L23_SOM_baseline)
     column.network.run(baseline_time * ms)
 
+      
     
     L4C = column.layers['L4C']
     cfg_L4C = CONFIG['layers']['L4C']
@@ -177,7 +178,7 @@ def main():
     L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
                                   N=N_stim_E, 
                                   rate=stim_rate_E, 
-                                  weight=w_ext_AMPA)  
+                                  weight=w_ext_AMPA/2)  
     
     L4C_PV_grp = L4C.neuron_groups['PV']
     N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
@@ -235,44 +236,44 @@ def main():
 
     electrode_positions = CONFIG['electrode_positions']
 
-    # print("Computing LFP using kernel method...")
-    # lfp_signals, time_array = calculate_lfp_kernel_method(
-    #     spike_monitors,
-    #     neuron_groups,
-    #     CONFIG['layers'],
-    #     electrode_positions,
-    #     fs=10000,
-    #     sim_duration_ms=baseline_time + stimuli_time
-    # )
+    print("Computing LFP using kernel method...")
+    lfp_signals, time_array = calculate_lfp_kernel_method(
+        spike_monitors,
+        neuron_groups,
+        CONFIG['layers'],
+        electrode_positions,
+        fs=10000,
+        sim_duration_ms=baseline_time + stimuli_time
+    )
 
-    # print("Computing bipolar LFP...")
-    # bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
-    #     lfp_signals,
-    #     electrode_positions
-    # )
+    print("Computing bipolar LFP...")
+    bipolar_signals, channel_labels, channel_depths = compute_bipolar_lfp(
+        lfp_signals,
+        electrode_positions
+    )
 
     fig_raster = plot_raster(spike_monitors, baseline_time, stimuli_time, CONFIG['layers'])
 
-    # fig_power_lfp = plot_lfp_power_comparison_kernel(
-    #                     lfp_signals,
-    #                     time_array,
-    #                     electrode_positions,
-    #                     baseline_time=baseline_time,
-    #                     pre_stim_duration=1000,
-    #                     post_stim_duration=1000,
-    #                     transient_skip=500
-    #                 )
+    fig_power_lfp = plot_lfp_power_comparison_kernel(
+                        lfp_signals,
+                        time_array,
+                        electrode_positions,
+                        baseline_time=baseline_time,
+                        pre_stim_duration=1000,
+                        post_stim_duration=1000,
+                        transient_skip=500
+                    )
 
-    # fig_power_bipolar = plot_bipolar_power_comparison_kernel(
-    #                     bipolar_signals,
-    #                     channel_labels,
-    #                     channel_depths,
-    #                     time_array,
-    #                     baseline_time=baseline_time,
-    #                     pre_stim_duration=1000,
-    #                     post_stim_duration=1000,
-    #                     transient_skip=500
-    #                 )
+    fig_power_bipolar = plot_bipolar_power_comparison_kernel(
+                        bipolar_signals,
+                        channel_labels,
+                        channel_depths,
+                        time_array,
+                        baseline_time=baseline_time,
+                        pre_stim_duration=1000,
+                        post_stim_duration=1000,
+                        transient_skip=500
+                    )
 
 
     fig_rate = plot_rate(rate_monitors, CONFIG['layers'], baseline_time, stimuli_time,
