@@ -385,9 +385,9 @@ def main():
     results = run_parameter_sweep(
         p_values,
         baseline_time=800,  
-        sim_time=1200,     
+        sim_time=3000,     
         save_results=True,
-        output_file='inter_layer_sweep_results.pkl'
+        output_file='inter_layer_sweep_results_longer.pkl'
     )
 
     print("\nGenerating visualizations...")
