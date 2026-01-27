@@ -141,7 +141,7 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L23']['connection_prob'],
         'conductance': csv_layer_configs['L23']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 65},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 85},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
@@ -150,7 +150,7 @@ _LAYER_CONFIGS = {
             'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
         },
-        'input_rate': 10*Hz,
+        'input_rate': 8*Hz,
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -194,7 +194,7 @@ _LAYER_CONFIGS = {
             'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
         },
-        'input_rate': 10*Hz,
+        'input_rate': 8*Hz,
         'neuron_counts': {'E': 3192, 'PV': 365, 'SOM': 182, 'VIP': 61},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -238,7 +238,7 @@ _LAYER_CONFIGS = {
             'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 28},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 18},
         },
-        'input_rate': 10*Hz,
+        'input_rate': 8*Hz,
         'neuron_counts': {'E': 2040, 'PV': 187, 'SOM': 137, 'VIP': 36},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -492,7 +492,7 @@ CONFIG = {
 
     'synapses': {
         'Q': {
-            'EXT_AMPA': 0.4*nS,
+            'EXT_AMPA': 1.25*nS,
             'EXT_NMDA': 0.15*nS,
         },
     },
