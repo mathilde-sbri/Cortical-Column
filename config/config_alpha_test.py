@@ -5,13 +5,13 @@ import pandas as pd
 from collections import defaultdict
       
 
-EXT_AMPA_WEIGHT = 1.25*nS
-EXT_NMDA_WEIGHT = 0.15*nS 
+EXT_AMPA_WEIGHT = 1.1*nS 
+EXT_NMDA_WEIGHT = 0.25*nS 
 
 tau_e_AMPA = 5*ms
 tau_e_NMDA = 100*ms
 tau_i_PV   =  6*ms  
-tau_i_SOM  = 55*ms
+tau_i_SOM  = 40*ms
 tau_i_VIP  = 8*ms
 
 v_reset = -65.*mV
@@ -26,30 +26,25 @@ beta_p  = 1.0
 def g_NMDA(v_mV):
     return 1.0 / (1.0 + 0.28 * np.exp(-0.062 * v_mV))
 
+
+
 csv_layer_configs, _INTER_LAYER_CONNECTIONS, _INTER_LAYER_CONDUCTANCES = load_connectivity_from_csv(
     'config/connection_probabilities2.csv',
-    'config/conductances_AMPA2_alpha_v2.csv',
-    'config/conductances_NMDA2_alpha_v2.csv'  )
+    'config/conductances_AMPA2.csv',
+    'config/conductances_NMDA2.csv'
+)
 
 
-
-# Temporarily disable inter-layer connections to test alpha generation
-# _INTER_LAYER_CONNECTIONS = {}
-# _INTER_LAYER_CONDUCTANCES = {}
 
 _LAYER_CONFIGS = {
     'L23': {
         'connection_prob': csv_layer_configs['L23']['connection_prob'],
         'conductance': csv_layer_configs['L23']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 65},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 35},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 85},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 12},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
-            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 55},
-            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
-            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 12},
         },
         'input_rate': 8*Hz,
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
@@ -65,13 +60,9 @@ _LAYER_CONFIGS = {
         'conductance': csv_layer_configs['L4AB']['conductance'],
         'poisson_inputs': {
             'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 35},
-            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 24},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 12},
+            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 24}, 
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 24},
-            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
-            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 24},
-            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 18},
         },
         'input_rate': 8*Hz,
         'neuron_counts': {'E': 2720, 'PV': 408, 'SOM': 204, 'VIP': 68},
@@ -87,13 +78,9 @@ _LAYER_CONFIGS = {
         'conductance': csv_layer_configs['L4C']['conductance'],
         'poisson_inputs': {
             'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 35},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 10},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
-            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
-            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
         },
         'input_rate': 8*Hz,
         'neuron_counts': {'E': 3192, 'PV': 365, 'SOM': 182, 'VIP': 61},
@@ -108,36 +95,30 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L5']['connection_prob'],
         'conductance': csv_layer_configs['L5']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
-            'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
-            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
-            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
-            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
+            'E':   {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60}, 
+            'PV':  {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 10},
+            'SOM': {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
+            'VIP': {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
         },
         'input_rate': 8*Hz,
-        'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},
-        'coordinates' : {
-            'x': (-0.15,0.15),
-            'y': (-0.15,0.15),
+        'neuron_counts': {'E': 1600, 'PV': 208, 'SOM': 152, 'VIP': 40},  
+        'equation_override': {'E': 'E_L5'},  
+        'coordinates': {
+            'x': (-0.15, 0.15),
+            'y': (-0.15, 0.15),
             'z': (-0.34, -0.14),
-        }
+        },
     },
+    
 
     'L6': {
         'connection_prob': csv_layer_configs['L6']['connection_prob'],
         'conductance': csv_layer_configs['L6']['conductance'],
         'poisson_inputs': {
             'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
-            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
+            'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 10},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 28},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 28},
-            'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 60},
-            'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 28},
-            'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 18},
         },
         'input_rate': 8*Hz,
         'neuron_counts': {'E': 2040, 'PV': 187, 'SOM': 137, 'VIP': 36},
@@ -159,7 +140,7 @@ CONFIG = {
 
     'models': {
         'equations': {
-            'E': """
+             'E': """
         dv/dt = (
             gL*(EL - v)
           + gL*DeltaT*exp((v - VT)/DeltaT)
@@ -198,6 +179,61 @@ CONFIG = {
         C       : farad
         gL      : siemens
         tauw    : second
+            """,
+
+
+            'E_L5': """
+        dv/dt = (
+            gL*(EL - v)
+        + gL*DeltaT*exp((v - VT)/DeltaT)
+        + gE_AMPA*(Ee - v)
+        + gE_NMDA*(Ee - v)/(1 + 0.28*exp(-0.062*v/mV))
+        - (gPV + gSOM + gVIP)*(v - Ei)
+        + I_h
+        - w + I
+        )/C : volt (unless refractory)
+
+        
+        I_h = gh * (-30*mV - v) : amp
+        dgh/dt = (gh_inf - gh) / (60*ms) : siemens  
+        gh_inf = (20*nS) / (1 + exp((v - (-75*mV)) / (6*mV))) : siemens  
+
+
+
+        IsynE_AMPA = gE_AMPA*(Ee - v) : amp
+        IsynE_NMDA = gE_NMDA*(Ee - v)/(1 + 0.28*exp(-0.062*v/mV)) : amp
+        IsynE      = IsynE_AMPA + IsynE_NMDA : amp
+
+        IsynIPV    = gPV*(Ei - v) : amp
+        IsynISOM   = gSOM*(Ei - v) : amp
+        IsynIVIP   = gVIP*(Ei - v) : amp
+
+        gI   = gPV + gSOM + gVIP : siemens
+        gE   = gE_AMPA : siemens
+        IsynI = gI*(v - Ei) : amp
+
+        dgE_AMPA/dt = -gE_AMPA/tau_e_AMPA : siemens
+        dgE_NMDA/dt = -gE_NMDA/tau_e_NMDA : siemens
+        dgPV/dt     = -gPV/tau_i_PV       : siemens
+        dgSOM/dt    = -gSOM/tau_i_SOM     : siemens
+        dgVIP/dt    = -gVIP/tau_i_VIP     : siemens
+
+        dw/dt   = (a*(v - EL) - w)/tauw : amp
+        taum    = C/gL : second
+        I       : amp
+        a       : siemens
+        b       : amp
+        DeltaT  : volt
+        Vcut    : volt
+        EL      : volt
+        C       : farad
+        gL      : siemens
+        tauw    : second
+        gh_max  : siemens (constant)
+        Eh      : volt (constant)
+        tau_h   : second (constant)
+        V_half_h : volt (constant)
+        k_h     : volt (constant)
             """,
 
             'PV': """
@@ -337,12 +373,19 @@ CONFIG = {
             'V_reset':    v_reset,
             'Ee':         ee,
             'Ei':         ei,
+            'gh_max':     15*nS,
+            'Eh':         -30*mV,
+            'tau_h':      80*ms,
+            'V_half_h':   -75*mV,
+            'k_h':        6*mV,
         },
     },
 
     'intrinsic_params': {
-        'E':   {'a': 4*nS, 'b': 20*pA, 'DeltaT': 2*mV,
-                'C': 97*pF, 'gL': 4.2*nS, 'tauw': 150*ms, 'EL': -66*mV},
+        'E':   {'a': 4*nS, 'b': 100*pA, 'DeltaT': 2*mV,
+                'C': 97*pF, 'gL': 4.2*nS, 'tauw': 80*ms, 'EL': -62*mV,
+                'gh_max': 15*nS, 'Eh': -30*mV, 'tau_h': 80*ms, 
+                'V_half_h': -75*mV, 'k_h': 6*mV},
         'PV':  {'a': 0*nS, 'b': 0*pA, 'DeltaT': 0.5*mV,
                 'C': 38*pF, 'gL': 3.8*nS, 'tauw': 50*ms,  'EL': -68*mV},
         'SOM': {'a': 4*nS, 'b': 25*pA, 'DeltaT': 1.5*mV,
@@ -361,23 +404,24 @@ CONFIG = {
     },
 
     'initial_conditions': {
-        'DEFAULT': {'v': '-60*mV + rand()*15*mV',
+        'DEFAULT': {'v': '-60*mV + rand()*8*mV',
                     'gE_AMPA': 0*nS, 'gE_NMDA': 0*nS,
                     'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS,
                     'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'E':   {'v': '-60*mV + rand()*15*mV',
+        'E':   {'v': '-65*mV + rand()*10*mV',
+                'gh': 'gh_max * 0.3',
                 'gE_AMPA': 0*nS, 'gE_NMDA': 0*nS,
                 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS,
                 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'PV':  {'v': '-60*mV + rand()*15*mV',
+        'PV':  {'v': '-60*mV + rand()*8*mV',
                 'gE_AMPA': 0*nS, 'gE_NMDA': 0*nS,
                 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS,
                 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'SOM': {'v': '-60*mV + rand()*15*mV',
+        'SOM': {'v': '-60*mV + rand()*8*mV',
                 'gE_AMPA': 0*nS, 'gE_NMDA': 0*nS,
                 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS,
                 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},
-        'VIP': {'v': '-60*mV + rand()*15*mV',
+        'VIP': {'v': '-60*mV + rand()*8*mV',
                 'gE_AMPA': 0*nS, 'gE_NMDA': 0*nS,
                 'gPV': 0*nS, 'gSOM': 0*nS, 'gVIP': 0*nS,
                 'w': 0*pA, 'I': 0*pA, 'Vcut_offset_factor': 5},

@@ -424,7 +424,7 @@ def plot_lfp_power_comparison_kernel(lfp_signals, time_array, electrode_position
         lfp_pre = lfp[pre_start_idx:pre_end_idx]
         lfp_post = lfp[post_start_idx:post_end_idx]
 
-        nperseg = min(1024, len(lfp_pre) // 4)
+        nperseg = 100*min(1024, len(lfp_pre) // 4)
         freq_pre, psd_pre = scipy_signal.welch(lfp_pre, fs=fs, nperseg=nperseg, window='hann')
         freq_post, psd_post = scipy_signal.welch(lfp_post, fs=fs, nperseg=nperseg, window='hann')
 
@@ -481,7 +481,7 @@ def plot_bipolar_power_comparison_kernel(bipolar_signals, channel_labels, channe
         lfp_pre = lfp[pre_start_idx:pre_end_idx]
         lfp_post = lfp[post_start_idx:post_end_idx]
 
-        nperseg = min(1024, len(lfp_pre) // 4)
+        nperseg = 100*min(1024, len(lfp_pre) // 4)
         freq_pre, psd_pre = scipy_signal.welch(lfp_pre, fs=fs, nperseg=nperseg, window='hann')
         freq_post, psd_post = scipy_signal.welch(lfp_post, fs=fs, nperseg=nperseg, window='hann')
 

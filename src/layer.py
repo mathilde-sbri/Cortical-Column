@@ -23,10 +23,13 @@ class CorticalLayer:
         self.poisson_inputs = {}
 
         self._create_neuron_groups()
+        
+
         self._set_neuron_parameters()
         self._create_poisson_inputs()
         self._create_internal_connections()
         self._create_monitors()
+
 
     def _create_neuron_groups(self):
         models_cfg = self.config.get('models', {})
@@ -37,10 +40,18 @@ class CorticalLayer:
         eqs_map = self.config['models']['equations']
         threshold = self.config['models']['threshold']
         reset = self.config['models']['reset']
+        
+        # Get equation overrides for this layer (if any)
+        eq_override = self.layer_config.get('equation_override', {})
 
         for pop_name, n in self.layer_config.get('neuron_counts', {}).items():
+            # Use override equation if specified, otherwise use pop_name
+            eq_key = eq_override.get(pop_name, pop_name)
+            
             self.neuron_groups[pop_name] = NeuronGroup(
-                int(n), eqs_map[pop_name], threshold=threshold, reset=reset,
+                int(n), eqs_map[eq_key],  # Use eq_key instead of pop_name
+                threshold=threshold, 
+                reset=reset,
                 refractory=self.config['neurons']['T_REF'],
                 namespace=common_namespace
             )
@@ -74,9 +85,12 @@ class CorticalLayer:
             mu_st = drive.get('mu_stim', {})
             sd_st = drive.get('sd_stim', {})
             sg = drive.get('sigma_global', 0*mV)
-
+        eq_override = self.layer_config.get('equation_override', {})
+        
         for pop_name, g in self.neuron_groups.items():
-            ip = intrinsic.get(pop_name, {})
+            param_key = eq_override.get(pop_name, pop_name)
+            ip = intrinsic.get(param_key, intrinsic.get(pop_name, {}))
+       
             set_if_exists(g, 'a', ip.get('a', 0*nS))
             set_if_exists(g, 'b', ip.get('b', 0*pA))
             set_if_exists(g, 'DeltaT', ip.get('DeltaT', 2*mV))

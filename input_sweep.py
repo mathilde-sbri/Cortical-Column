@@ -1,12 +1,12 @@
-
 import os
 import numpy as np
 import brian2 as b2
 from brian2 import *
-from config.config2 import CONFIG
+from config.config_alpha_test import CONFIG
 from src.column import CorticalColumn
 from src.analysis import calculate_lfp_kernel_method, compute_power_spectrum
 import copy
+import argparse
 
 
 def run_single_rate(
@@ -308,32 +308,59 @@ def run_rate_sweep(
 
 
 if __name__ == "__main__":
-    rate_values = np.arange(0, 16, 1)
-
-    # Define targets as a dict: {(layer, pop, input_type): weight_scale}
-    # input_type can be: 'AMPA', 'PV', 'SOM', 'VIP'
-    #
-    # Examples:
-    #   AMPA input to L4C E cells:     ('L4C', 'E', 'AMPA'): 1.0
-    #   PV-like GABA to L4C E cells:   ('L4C', 'E', 'PV'): 1.0
-    #   SOM-like GABA to L23 E cells:  ('L23', 'E', 'SOM'): 1.0
-    #
-    # For backwards compatibility, 2-tuple keys default to AMPA:
-    #   ('L1', 'VIP'): 1.0  is equivalent to  ('L1', 'VIP', 'AMPA'): 1.0
+    parser = argparse.ArgumentParser(description='Run input sweep simulations')
+    parser.add_argument('--layer', type=str, required=True,
+                        help='Target layer (e.g., L4C, L23, L5, L6, L1)')
+    parser.add_argument('--pop', type=str, required=True,
+                        help='Target population (e.g., E, PV, SOM, VIP)')
+    parser.add_argument('--input-type', type=str, default='AMPA',
+                        choices=['AMPA', 'PV', 'SOM', 'VIP'],
+                        help='Input type (default: AMPA)')
+    parser.add_argument('--weight-scale', type=float, default=1.0,
+                        help='Weight scale multiplier (default: 1.0)')
+    parser.add_argument('--rate-min', type=float, default=0,
+                        help='Minimum stimulation rate in Hz (default: 0)')
+    parser.add_argument('--rate-max', type=float, default=20,
+                        help='Maximum stimulation rate in Hz (default: 20)')
+    parser.add_argument('--rate-step', type=float, default=1,
+                        help='Step size for rate sweep in Hz (default: 1)')
+    parser.add_argument('--baseline-ms', type=float, default=1000,
+                        help='Baseline duration in ms (default: 1000)')
+    parser.add_argument('--stim-ms', type=float, default=1500,
+                        help='Stimulation duration in ms (default: 1500)')
+    parser.add_argument('--save-dir', type=str, default='results/input_sweeps2',
+                        help='Directory to save results (default: results/input_sweeps2)')
+    parser.add_argument('--quiet', action='store_true',
+                        help='Suppress verbose output')
+    
+    args = parser.parse_args()
+    
+    # Generate rate values
+    rate_values = np.arange(args.rate_min, args.rate_max + args.rate_step/2, args.rate_step)
+    
+    # Define targets from command-line arguments
     targets = {
-        ('L4C', 'E', 'AMPA'): 0.5,
-        ('L4C', 'PV', 'AMPA'): 1.0,
+        (args.layer, args.pop, args.input_type): args.weight_scale
     }
-
+    
+    print(f"\n{'='*70}")
+    print(f"Starting sweep: {args.pop} in {args.layer} with {args.input_type} input")
+    print(f"Weight scale: {args.weight_scale}")
+    print(f"Rate range: {args.rate_min}-{args.rate_max} Hz (step: {args.rate_step})")
+    print(f"Save directory: {args.save_dir}")
+    print(f"{'='*70}\n")
+    
     result_path = run_rate_sweep(
         config=CONFIG,
         targets=targets,
         rate_values=rate_values,
-        baseline_ms=1000,
-        stim_ms=1500,
+        baseline_ms=args.baseline_ms,
+        stim_ms=args.stim_ms,
         fs=10000,
-        save_dir="results/input_sweeps2",
-        verbose=True,
+        save_dir=args.save_dir,
+        verbose=not args.quiet,
     )
 
-    print(f"\nResults saved to: {result_path}")
+    print(f"\n{'='*70}")
+    print(f"Results saved to: {result_path}")
+    print(f"{'='*70}\n")
