@@ -2,7 +2,7 @@ import os
 import numpy as np
 import brian2 as b2
 from brian2 import *
-from config.config_alpha_test import CONFIG
+from config.config2 import CONFIG
 from src.column import CorticalColumn
 from src.analysis import calculate_lfp_kernel_method, compute_power_spectrum
 import copy
@@ -129,8 +129,10 @@ def run_single_rate(
     electrode_positions = config['electrode_positions']
     total_sim_ms = baseline_ms + stim_ms
 
-    # Compute LFP using kernel method
-    lfp_signals, time_array = calculate_lfp_kernel_method(
+    from lfp_mazzoni_method import calculate_lfp_mazzoni
+
+    # Compute LFP
+    lfp_signals, time_array = calculate_lfp_mazzoni(
         spike_monitors,
         neuron_groups,
         config['layers'],

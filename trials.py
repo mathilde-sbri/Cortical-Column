@@ -42,14 +42,26 @@ def run_single_trial(
     ##############################################
     w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
     
-   
+    L23 = column.layers['L23']
+    cfg_L23 = CONFIG['layers']['L23']
+    L23_SOM_grp = L23.neuron_groups['SOM']
+    N_stim_L23_SOM = int(cfg_L23['poisson_inputs']['SOM']['N'])
+    stim_rate_L23_SOM = 10*Hz  
+    
+    L23_SOM_stim = PoissonInput(L23_SOM_grp, 'gE_AMPA',
+                             N=N_stim_L23_SOM, 
+                             rate=stim_rate_L23_SOM, 
+                             weight=w_ext_AMPA)
+    
+    column.network.add(L23_SOM_stim)
 
     column.network.run(baseline_ms * ms)
+    column.network.remove(L23_SOM_stim)
+    
     
     L4C = column.layers['L4C']
     cfg_L4C = CONFIG['layers']['L4C']
-    L6 = column.layers['L6']
-    cfg_L6 = CONFIG['layers']['L6']
+   
     
     L4C_E_grp = L4C.neuron_groups['E']
     N_stim_E = int(cfg_L4C['poisson_inputs']['E']['N'])
@@ -59,16 +71,26 @@ def run_single_trial(
                                   rate=stim_rate_E, 
                                   weight=w_ext_AMPA)  
     
+    
     L4C_PV_grp = L4C.neuron_groups['PV']
     N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
-    stim_rate_PV = 15*Hz 
+    stim_rate_PV = 5*Hz 
     L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA', 
                                N=N_stim_PV, 
                                rate=stim_rate_PV, 
-                               weight=w_ext_AMPA*2)  
+                               weight=w_ext_AMPA)  
     
     
+    L6 = column.layers['L6']
+    cfg_L6 = CONFIG['layers']['L6']
+    L6_PV_grp = L6.neuron_groups['PV']
+    N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'])
+    stim_rate_L6_PV = 5*Hz  
     
+    L6_PV_stim = PoissonInput(L6_PV_grp, 'gE_AMPA',
+                             N=N_stim_L6_PV, 
+                             rate=stim_rate_L6_PV, 
+                             weight=w_ext_AMPA)
     L6_E_grp = L6.neuron_groups['E']
     N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'])
     stim_rate_L6_E = 8*Hz  
@@ -77,70 +99,9 @@ def run_single_trial(
                              N=N_stim_L6_E, 
                              rate=stim_rate_L6_E, 
                              weight=w_ext_AMPA)
-    
-    column.network.add(L4C_PV_stim,L6_E_stim,L4C_E_stimAMPA )
- 
- 
-
-
-    # L23 = column.layers['L23']
-    # L23_SOM = L23.neuron_groups['SOM']
-
-    # L23_SOM_baseline = PoissonInput(
-    #     L23_SOM,
-    #     'gE_AMPA',
-    #     N=15,
-    #     rate=3*Hz,
-    #     weight=w_ext_AMPA
-    # )
-
-    # column.network.add( L23_SOM_baseline)
-
-        
-    
-    # L4C = column.layers['L4C']
-    # cfg_L4C = CONFIG['layers']['L4C']
-    # L6 = column.layers['L6']
-    # cfg_L6 = CONFIG['layers']['L6']
-    
-    # L4C_VIP_grp = L4C.neuron_groups['VIP']
-    # N_stim_VIP = int(cfg_L4C['poisson_inputs']['VIP']['N'])
-    # stim_rate_VIP = 10*Hz  
-    # L4C_VIP_stimAMPA = PoissonInput(L4C_VIP_grp, 'gE_AMPA', 
-    #                               N=N_stim_VIP, 
-    #                               rate=stim_rate_VIP, 
-    #                               weight=w_ext_AMPA)  
-    # column.network.add(L4C_VIP_stimAMPA)
-    
-    
- 
-
-    # #K STREAM
-    # w_K = w_ext_AMPA / 5
-
-    # L1 = column.layers['L1']
-    # L1_INH = L1.neuron_groups['VIP']
-
-    # L1_K_baseline = PoissonInput(
-    #         L1_INH,
-    #         'gE_AMPA',
-    #         N=20,
-    #         rate=3*Hz,
-    #         weight=w_K
-    # )
-
-    # L23 = column.layers['L23']
-    # L23_SOM = L23.neuron_groups['SOM']
-
-    # L23_SOM_baseline = PoissonInput(
-    #     L23_SOM,
-    #     'gE_AMPA',
-    #     N=15,
-    #     rate=3*Hz,
-    #     weight=w_K
-    # )
-
-    # column.network.add(L1_K_baseline, L23_SOM_baseline)
+    column.network.add(L6_E_stim)
+    column.network.add(L4C_E_stimAMPA)
+   
 
     column.network.run(post_ms * ms)
 
@@ -165,26 +126,26 @@ def run_single_trial(
     if verbose:
         print("Computing LFP using kernel method...")
 
-    # lfp_signals, time_array = calculate_lfp_kernel_method(
-    #     spike_monitors,
-    #     neuron_groups,
-    #     config['layers'],
-    #     electrode_positions,
-    #     fs=fs,
-    #     sim_duration_ms=total_sim_ms,  
-    # )
-
-    from lfp_mazzoni_method import calculate_lfp_mazzoni
-
-    # Compute LFP
-    lfp_signals, time_array = calculate_lfp_mazzoni(
+    lfp_signals, time_array = calculate_lfp_kernel_method(
         spike_monitors,
         neuron_groups,
-        CONFIG['layers'],
+        config['layers'],
         electrode_positions,
-        fs=10000,
-        sim_duration_ms=total_sim_ms
+        fs=fs,
+        sim_duration_ms=total_sim_ms,  
     )
+
+    # from lfp_mazzoni_method import calculate_lfp_mazzoni
+
+    # # Compute LFP
+    # lfp_signals, time_array = calculate_lfp_mazzoni(
+    #     spike_monitors,
+    #     neuron_groups,
+    #     CONFIG['layers'],
+    #     electrode_positions,
+    #     fs=10000,
+    #     sim_duration_ms=total_sim_ms
+    # )
 
 
     if verbose:
@@ -303,6 +264,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/real_conductances_ff_2nd_try",
+        save_dir="results/kernel_real_conductances_ff_2nd_try",
         verbose=True,
     )

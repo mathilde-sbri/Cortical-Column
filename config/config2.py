@@ -51,7 +51,7 @@ _LAYER_CONFIGS = {
             'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 12},
         },
-        'input_rate': 8*Hz,
+        'input_rate': 2*Hz,
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -73,7 +73,7 @@ _LAYER_CONFIGS = {
             'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 24},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 18},
         },
-        'input_rate': 8*Hz,
+        'input_rate': 2*Hz,
         'neuron_counts': {'E': 2720, 'PV': 408, 'SOM': 204, 'VIP': 68},
         'coordinates' : {
             'x': (-0.15,0.15),
@@ -95,7 +95,7 @@ _LAYER_CONFIGS = {
             'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 20},
         },
-        'input_rate': 8*Hz,
+        'input_rate': 3*Hz,
         'neuron_counts': {'E': 3192, 'PV': 365, 'SOM': 182, 'VIP': 61},
         'coordinates' : {
             'x': (-0.15,0.15),

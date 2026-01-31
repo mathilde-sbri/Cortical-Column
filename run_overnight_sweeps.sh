@@ -61,12 +61,14 @@ run_sweep "L5" "SOM" "AMPA" 1.0
 
 # L4C excitatory cells with different input types
 run_sweep "L4C" "E" "AMPA" 1.0
-run_sweep "L4C" "E" "PV" 1.0
-run_sweep "L4C" "E" "SOM" 1.0
+
 
 # L4C inhibitory populations
 run_sweep "L4C" "PV" "AMPA" 1.0
 run_sweep "L4C" "SOM" "AMPA" 1.0
+
+run_sweep "L4C" "E" "PV" 1.0
+run_sweep "L4C" "E" "SOM" 1.0
 
 # L23 excitatory cells
 run_sweep "L23" "E" "AMPA" 1.0
