@@ -73,8 +73,10 @@ def run_single_rate(
     w_ext_AMPA = config['synapses']['Q']['EXT_AMPA']
 
     # Mapping from input_type to conductance variable and base weight
+    w_ext_NMDA = config['synapses']['Q']['EXT_NMDA']
     input_type_map = {
         'AMPA': ('gE_AMPA', w_ext_AMPA),
+        'NMDA': ('gE_NMDA', w_ext_NMDA),
         'PV': ('gPV', w_ext_AMPA),      # Use same base weight, can be scaled
         'SOM': ('gSOM', w_ext_AMPA),
         'VIP': ('gVIP', w_ext_AMPA),
@@ -312,9 +314,9 @@ if __name__ == "__main__":
     parser.add_argument('--layer', type=str, required=True,
                         help='Target layer (e.g., L4C, L23, L5, L6, L1)')
     parser.add_argument('--pop', type=str, required=True,
-                        help='Target population (e.g., E, PV, SOM, VIP)')
+                        help='Target population(s), comma-separated (e.g., E or E,PV)')
     parser.add_argument('--input-type', type=str, default='AMPA',
-                        choices=['AMPA', 'PV', 'SOM', 'VIP'],
+                        choices=['AMPA', 'NMDA', 'PV', 'SOM', 'VIP'],
                         help='Input type (default: AMPA)')
     parser.add_argument('--weight-scale', type=float, default=1.0,
                         help='Weight scale multiplier (default: 1.0)')
@@ -337,14 +339,17 @@ if __name__ == "__main__":
     
     # Generate rate values
     rate_values = np.arange(args.rate_min, args.rate_max + args.rate_step/2, args.rate_step)
-    
-    # Define targets from command-line arguments
+
+    # Define targets from command-line arguments (support multiple populations)
+    populations = [p.strip() for p in args.pop.split(',')]
     targets = {
-        (args.layer, args.pop, args.input_type): args.weight_scale
+        (args.layer, pop, args.input_type): args.weight_scale
+        for pop in populations
     }
-    
+
+    pop_str = '+'.join(populations)
     print(f"\n{'='*70}")
-    print(f"Starting sweep: {args.pop} in {args.layer} with {args.input_type} input")
+    print(f"Starting sweep: {pop_str} in {args.layer} with {args.input_type} input")
     print(f"Weight scale: {args.weight_scale}")
     print(f"Rate range: {args.rate_min}-{args.rate_max} Hz (step: {args.rate_step})")
     print(f"Save directory: {args.save_dir}")

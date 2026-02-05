@@ -54,41 +54,25 @@ run_sweep() {
     echo "" | tee -a "$BATCH_LOG"
 }
 
-# L5 configurations
-run_sweep "L5" "E" "AMPA" 1.0
-run_sweep "L5" "PV" "AMPA" 1.0
-run_sweep "L5" "SOM" "AMPA" 1.0
+# =============================================================================
+# NMDA input sweeps on Excitatory neurons (5 layers)
+# =============================================================================
 
-# L4C excitatory cells with different input types
-run_sweep "L4C" "E" "AMPA" 1.0
-run_sweep "L4C" "E" "PV" 1.0
-run_sweep "L4C" "E" "SOM" 1.0
+run_sweep "L23" "E" "NMDA" 1.0
+run_sweep "L4AB" "E" "NMDA" 1.0
+run_sweep "L4C" "E" "NMDA" 1.0
+run_sweep "L5" "E" "NMDA" 1.0
+run_sweep "L6" "E" "NMDA" 1.0
 
-# L4C inhibitory populations
-run_sweep "L4C" "PV" "AMPA" 1.0
-run_sweep "L4C" "SOM" "AMPA" 1.0
+# =============================================================================
+# NMDA input sweeps on E+PV populations (5 layers)
+# =============================================================================
 
-# L23 excitatory cells
-run_sweep "L23" "E" "AMPA" 1.0
-run_sweep "L23" "E" "PV" 1.0
-run_sweep "L23" "E" "SOM" 1.0
-
-# L23 inhibitory populations
-run_sweep "L23" "PV" "AMPA" 1.0
-run_sweep "L23" "SOM" "AMPA" 1.0
-run_sweep "L23" "VIP" "AMPA" 1.0
-
-
-
-# L6 configurations
-run_sweep "L6" "E" "AMPA" 1.0
-run_sweep "L6" "PV" "AMPA" 1.0
-
-# L1 VIP cells (example)
-
-# Additional configurations with different weight scales (if desired)
-# run_sweep "L4C" "E" "AMPA" 2.0
-# run_sweep "L4C" "PV" "AMPA" 0.5
+run_sweep "L23" "E,PV" "NMDA" 1.0
+run_sweep "L4AB" "E,PV" "NMDA" 1.0
+run_sweep "L4C" "E,PV" "NMDA" 1.0
+run_sweep "L5" "E,PV" "NMDA" 1.0
+run_sweep "L6" "E,PV" "NMDA" 1.0
 
 # =============================================================================
 # End of configurations
