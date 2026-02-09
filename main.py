@@ -32,11 +32,23 @@ def main():
     
    
     
+    L23 = column.layers['L23']
+    cfg_L23 = CONFIG['layers']['L23']
    
+    
+    L23_SOM_grp = L23.neuron_groups['SOM']
+    N_stim_SOM = int(cfg_L23['poisson_inputs']['SOM']['N'])
+    stim_rate_SOM = 5*Hz  
+    L23_SOM_stimAMPA = PoissonInput(L23_SOM_grp, 'gE_AMPA', 
+                                  N=N_stim_SOM, 
+                                  rate=stim_rate_SOM, 
+                                  weight=w_ext_AMPA/2)  
+    column.network.add(L23_SOM_stimAMPA)
 
     column.network.run(baseline_time * ms)
    
-    
+    column.network.remove(L23_SOM_stimAMPA)
+   
 
     L4C = column.layers['L4C']
     cfg_L4C = CONFIG['layers']['L4C']
@@ -44,7 +56,7 @@ def main():
     
     L4C_E_grp = L4C.neuron_groups['E']
     N_stim_E = int(cfg_L4C['poisson_inputs']['E']['N'])
-    stim_rate_E = 15*Hz  
+    stim_rate_E = 25*Hz  
     L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
                                   N=N_stim_E, 
                                   rate=stim_rate_E, 
@@ -53,7 +65,7 @@ def main():
     
     L4C_PV_grp = L4C.neuron_groups['PV']
     N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
-    stim_rate_PV = 15*Hz 
+    stim_rate_PV = 25*Hz 
     L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA', 
                                N=N_stim_PV, 
                                rate=stim_rate_PV, 
@@ -64,7 +76,7 @@ def main():
     cfg_L6 = CONFIG['layers']['L6']
     L6_PV_grp = L6.neuron_groups['PV']
     N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'])
-    stim_rate_L6_PV = 8*Hz  
+    stim_rate_L6_PV = 10*Hz  
     
     L6_PV_stim = PoissonInput(L6_PV_grp, 'gE_AMPA',
                              N=N_stim_L6_PV, 
@@ -72,7 +84,7 @@ def main():
                              weight=w_ext_AMPA*2)
     L6_E_grp = L6.neuron_groups['E']
     N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'])
-    stim_rate_L6_E = 8*Hz  
+    stim_rate_L6_E = 10*Hz  
     
     L6_E_stim = PoissonInput(L6_E_grp, 'gE_AMPA',
                              N=N_stim_L6_E, 
@@ -167,12 +179,12 @@ def main():
 
 
     fig_rate = plot_rate(rate_monitors, CONFIG['layers'], baseline_time, stimuli_time,
-                 smooth_window=15*ms, 
-                 ylim_max=80,      
-                 show_stats=True)  
-    fig_lfp = plot_lfp_comparison(lfp_signals, bipolar_signals, time_array, electrode_positions, 
+                 smooth_window=15*ms,
+                 ylim_max=80,
+                 show_stats=True)
+    fig_lfp = plot_lfp_comparison(lfp_signals, bipolar_signals, time_array, electrode_positions,
                         channel_labels, channel_depths, figsize=(18, 12), time_range=(1000, 3500))
-    
+   
     plt.show()
 
 
