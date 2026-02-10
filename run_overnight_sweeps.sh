@@ -58,21 +58,22 @@ run_sweep() {
 # NMDA input sweeps on Excitatory neurons (5 layers)
 # =============================================================================
 
-run_sweep "L23" "E" "NMDA" 1.0
-run_sweep "L4AB" "E" "NMDA" 1.0
-run_sweep "L4C" "E" "NMDA" 1.0
-run_sweep "L5" "E" "NMDA" 1.0
-run_sweep "L6" "E" "NMDA" 1.0
+run_sweep "L5" "SOM" "AMPA" 1.0
+run_sweep "L5" "E" "AMPA" 1.0
+run_sweep "L5" "PV" "AMPA" 1.0
+run_sweep "L5" "VIP" "AMPA" 1.0
 
-# =============================================================================
-# NMDA input sweeps on E+PV populations (5 layers)
-# =============================================================================
+run_sweep "L4C" "E,PV" "AMPA" 1.0
+run_sweep "L4C" "SOM" "AMPA" 1.0
+run_sweep "L4C" "VIP" "AMPA" 1.0
 
-run_sweep "L23" "E,PV" "NMDA" 1.0
-run_sweep "L4AB" "E,PV" "NMDA" 1.0
-run_sweep "L4C" "E,PV" "NMDA" 1.0
-run_sweep "L5" "E,PV" "NMDA" 1.0
-run_sweep "L6" "E,PV" "NMDA" 1.0
+run_sweep "L4AB" "E,PV" "AMPA" 1.0
+run_sweep "L4AB" "SOM" "AMPA" 1.0
+run_sweep "L4AB" "VIP" "AMPA" 1.0
+
+run_sweep "L6" "E,PV" "AMPA" 1.0
+run_sweep "L6" "SOM" "AMPA" 1.0
+run_sweep "L6" "VIP" "AMPA" 1.0
 
 # =============================================================================
 # End of configurations
