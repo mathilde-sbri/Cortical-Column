@@ -40,9 +40,13 @@ def run_single_trial(
 
 
     ##############################################
+    
+    
+    
     w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
+    w_ext_NMDA = CONFIG['synapses']['Q']['EXT_NMDA']
     
-    
+   
     
     L23 = column.layers['L23']
     cfg_L23 = CONFIG['layers']['L23']
@@ -50,19 +54,18 @@ def run_single_trial(
     
     L23_SOM_grp = L23.neuron_groups['SOM']
     N_stim_SOM = int(cfg_L23['poisson_inputs']['SOM']['N'])
-    stim_rate_SOM = 2*Hz  
-    L23_SOM_stimAMPA = PoissonInput(L23_SOM_grp, 'gE_AMPA', 
+    stim_rate_SOM = 10*Hz  
+    L23_SOM_stimNMDA= PoissonInput(L23_SOM_grp, 'gE_NMDA', 
                                   N=N_stim_SOM, 
                                   rate=stim_rate_SOM, 
-                                  weight=w_ext_AMPA/2)  
-    # column.network.add(L23_SOM_stimAMPA)
+                                  weight=w_ext_NMDA)  
+    column.network.add(L23_SOM_stimNMDA)
 
    
 
     column.network.run(baseline_ms * ms)
    
-    # column.network.remove(L23_SOM_stimAMPA)
-    # column.network.remove(L5_SOM_stimAMPA)
+    column.network.remove(L23_SOM_stimNMDA)
    
 
     L4C = column.layers['L4C']
@@ -84,14 +87,14 @@ def run_single_trial(
     L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA',
                                N=N_stim_PV,
                                rate=stim_rate_PV,
-                               weight=w_ext_AMPA*3)  
+                               weight=w_ext_AMPA*2)  
     
     
     L6 = column.layers['L6']
     cfg_L6 = CONFIG['layers']['L6']
     L6_PV_grp = L6.neuron_groups['PV']
     N_stim_L6_PV = int(cfg_L6['poisson_inputs']['PV']['N'])
-    stim_rate_L6_PV = 15*Hz  
+    stim_rate_L6_PV = 7*Hz  
     
     L6_PV_stim = PoissonInput(L6_PV_grp, 'gE_AMPA',
                              N=N_stim_L6_PV,
@@ -99,17 +102,17 @@ def run_single_trial(
                              weight=w_ext_AMPA*2)
     L6_E_grp = L6.neuron_groups['E']
     N_stim_L6_E = int(cfg_L6['poisson_inputs']['E']['N'])
-    stim_rate_L6_E = 15*Hz  
+    stim_rate_L6_E = 7*Hz  
     
     L6_E_stim = PoissonInput(L6_E_grp, 'gE_AMPA',
                              N=N_stim_L6_E, 
                              rate=stim_rate_L6_E, 
                              weight=w_ext_AMPA)
 
-    w_inh = 1.5*nS
-    som_inh_rate = 20*Hz
+    w_inh = 1*nS
+    som_inh_rate = 4*Hz
     som_inh_stims = []
-    for layer_name in ['L23', 'L4AB', 'L4C', 'L5', 'L6']:
+    for layer_name in [ 'L4C','L5', 'L6']:
         layer = column.layers[layer_name]
         som_grp = layer.neuron_groups['SOM']
         N_inh = int(CONFIG['layers'][layer_name]['poisson_inputs']['SOM']['N'])
@@ -287,6 +290,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/11_02_last",
+        save_dir="results/12_02_2",
         verbose=True,
     )
