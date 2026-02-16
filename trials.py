@@ -41,22 +41,26 @@ def run_single_trial(
 
     ##############################################
     w_ext_AMPA = CONFIG['synapses']['Q']['EXT_AMPA']
+    w_ext_NMDA = CONFIG['synapses']['Q']['EXT_NMDA']
+    
+   
     
     L23 = column.layers['L23']
     cfg_L23 = CONFIG['layers']['L23']
+   
+    
     L23_SOM_grp = L23.neuron_groups['SOM']
-    N_stim_L23_SOM = int(cfg_L23['poisson_inputs']['SOM']['N'])
-    stim_rate_L23_SOM = 10*Hz  
-    
-    L23_SOM_stim = PoissonInput(L23_SOM_grp, 'gE_AMPA',
-                             N=N_stim_L23_SOM, 
-                             rate=stim_rate_L23_SOM, 
-                             weight=w_ext_AMPA)
-    
-    column.network.add(L23_SOM_stim)
+    N_stim_SOM = int(cfg_L23['poisson_inputs']['SOM']['N'])
+    stim_rate_SOM = 10*Hz  
+    L23_SOM_stimNMDA= PoissonInput(L23_SOM_grp, 'gE_NMDA', 
+                                  N=N_stim_SOM, 
+                                  rate=stim_rate_SOM, 
+                                  weight=w_ext_NMDA)  
+    column.network.add(L23_SOM_stimNMDA)
 
     column.network.run(baseline_ms * ms)
-    column.network.remove(L23_SOM_stim)
+   
+    column.network.remove(L23_SOM_stimNMDA)
     
     
     L4C = column.layers['L4C']

@@ -41,17 +41,20 @@ _LAYER_CONFIGS = {
     'L23': {
         'connection_prob': csv_layer_configs['L23']['connection_prob'],
         'conductance': csv_layer_configs['L23']['conductance'],
+        'intrinsic_params': {
+            'E': {'b': 20*pA, 'tauw': 150*ms}, 
+        },
         'poisson_inputs': {
             'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 65},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 35},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
-            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
+            'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 12},
             'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 55},
             'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 42},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 12},
         },
-        'input_rate': 2*Hz,
+        'input_rate': 3*Hz,
         'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 334, 'VIP': 282},
         'coordinates' : {
             'x': (-0.15,0.15),

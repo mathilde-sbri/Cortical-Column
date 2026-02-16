@@ -71,7 +71,8 @@ class CorticalLayer:
 
         cfg = self.config
         neurons_cfg = cfg.get('neurons', {})
-        intrinsic = cfg.get('intrinsic_params', {})
+        intrinsic_global = cfg.get('intrinsic_params', {})
+        intrinsic_layer = self.layer_config.get('intrinsic_params', {})
         ic_all = cfg.get('initial_conditions', {})
         vt_default = neurons_cfg.get('VT', -50.0*mV)
 
@@ -87,7 +88,10 @@ class CorticalLayer:
         
         for pop_name, g in self.neuron_groups.items():
             param_key = eq_override.get(pop_name, pop_name)
-            ip = intrinsic.get(param_key, intrinsic.get(pop_name, {}))
+            # Start with global params, then override with layer-specific
+            ip_global = intrinsic_global.get(param_key, intrinsic_global.get(pop_name, {}))
+            ip_layer = intrinsic_layer.get(param_key, intrinsic_layer.get(pop_name, {}))
+            ip = dict(ip_global, **ip_layer)  # Layer-specific overrides global
        
             set_if_exists(g, 'a', ip.get('a', 0*nS))
             set_if_exists(g, 'b', ip.get('b', 0*pA))
