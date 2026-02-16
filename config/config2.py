@@ -48,11 +48,11 @@ _LAYER_CONFIGS = {
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 22},
             'E_NMDA':   {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 55},
             'PV_NMDA':  {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
-            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 22},
+            'SOM_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 42},
             'VIP_NMDA': {'target': 'gE_NMDA', 'weight': 'EXT_NMDA', 'N': 12},
         },
         'input_rate': 2*Hz,
-        'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 475, 'VIP': 88},
+        'neuron_counts': {'E': 3520, 'PV': 317, 'SOM': 334, 'VIP': 282},
         'coordinates' : {
             'x': (-0.15,0.15),
             'y': (-0.15,0.15),

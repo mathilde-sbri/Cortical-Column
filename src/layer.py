@@ -41,15 +41,13 @@ class CorticalLayer:
         threshold = self.config['models']['threshold']
         reset = self.config['models']['reset']
         
-        # Get equation overrides for this layer (if any)
         eq_override = self.layer_config.get('equation_override', {})
 
         for pop_name, n in self.layer_config.get('neuron_counts', {}).items():
-            # Use override equation if specified, otherwise use pop_name
             eq_key = eq_override.get(pop_name, pop_name)
             
             self.neuron_groups[pop_name] = NeuronGroup(
-                int(n), eqs_map[eq_key],  # Use eq_key instead of pop_name
+                int(n), eqs_map[eq_key], 
                 threshold=threshold, 
                 reset=reset,
                 refractory=self.config['neurons']['T_REF'],

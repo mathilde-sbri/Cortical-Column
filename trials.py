@@ -264,6 +264,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/kernel_real_conductances_ff_2nd_try",
+        save_dir="results/16_02_2",
         verbose=True,
     )
