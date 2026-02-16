@@ -47,13 +47,10 @@ def add_frequency_band_lines(ax, fmax, show_labels=True):
 def load_sweep_results(filepath):
     data = np.load(filepath, allow_pickle=True)
 
-    # Handle both old format (single target) and new format (multiple targets)
     if 'target_layers' in data:
-        # New format with multiple targets
         target_layers = data['target_layers']
         target_pops = data['target_pops']
         weight_scales = data['weight_scales']
-        # Build targets dict and string for display
         targets = {
             (str(layer), str(pop)): float(scale)
             for layer, pop, scale in zip(target_layers, target_pops, weight_scales)
@@ -62,7 +59,6 @@ def load_sweep_results(filepath):
             f"{pop}_{layer}(x{scale})" for (layer, pop), scale in targets.items()
         ])
     else:
-        # Old format (single target) - backward compatibility
         targets = {(str(data['target_layer']), str(data['target_pop'])): 1.0}
         targets_str = f"{data['target_pop']}_{data['target_layer']}"
 
@@ -94,15 +90,8 @@ def plot_sweep_heatmaps(
     figsize=(16, 14),
     show_bands=True,
 ):
-    """
-    Plot power spectrum heatmaps for each electrode.
 
-    Parameters
-    ----------
-    log_scale : bool
-        If False (default), use linear color scaling like the paper.
-        If True, use logarithmic color scaling.
-    """
+
     data = load_sweep_results(filepath)
     targets_str = data['targets_str']
     rate_values = data['rate_values']

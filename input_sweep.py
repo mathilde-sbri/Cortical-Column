@@ -20,27 +20,7 @@ def run_single_rate(
     fs=10000,
     verbose=True,
 ):
-    """
-    Run a single stimulation trial.
-
-    Parameters
-    ----------
-    targets : dict
-        Dictionary mapping (layer, pop, input_type) tuples to weight scales.
-        Example: {('L4C', 'E', 'AMPA'): 1.0, ('L4C', 'PV', 'PV'): 2.0}
-
-        input_type can be:
-        - 'AMPA': excitatory input targeting gE_AMPA (default if using 2-tuple key)
-        - 'PV': inhibitory input targeting gPV (PV-like GABA)
-        - 'SOM': inhibitory input targeting gSOM (SOM-like GABA)
-        - 'VIP': inhibitory input targeting gVIP (VIP-like GABA)
-
-        For backwards compatibility, 2-tuple keys like ('L4C', 'E') are
-        interpreted as ('L4C', 'E', 'AMPA').
-
-        The weight scale multiplies the base external weight.
-    """
-
+   
 
     if base_seed is None:
         base_seed = config['simulation']['RANDOM_SEED']
@@ -53,7 +33,6 @@ def run_single_rate(
     b2.defaultclock.dt = config['simulation']['DT']
 
     if verbose:
-        # Handle both 2-tuple and 3-tuple keys for display
         parts = []
         for key, scale in targets.items():
             if len(key) == 2:
@@ -69,22 +48,20 @@ def run_single_rate(
     column = CorticalColumn(column_id=0, config=config)
     all_monitors = column.get_all_monitors()
 
-    # Add external stimulation BEFORE running baseline - so network stabilizes with input
     w_ext_AMPA = config['synapses']['Q']['EXT_AMPA']
 
-    # Mapping from input_type to conductance variable and base weight
     w_ext_NMDA = config['synapses']['Q']['EXT_NMDA']
     input_type_map = {
         'AMPA': ('gE_AMPA', w_ext_AMPA),
         'NMDA': ('gE_NMDA', w_ext_NMDA),
-        'PV': ('gPV', w_ext_AMPA),      # Use same base weight, can be scaled
+        'PV': ('gPV', w_ext_AMPA),    
         'SOM': ('gSOM', w_ext_AMPA),
         'VIP': ('gVIP', w_ext_AMPA),
     }
 
     if stim_rate_hz > 0:
         for target_key, weight_scale in targets.items():
-            # Handle both 2-tuple (backwards compat) and 3-tuple keys
+       
             if len(target_key) == 2:
                 target_layer, target_pop = target_key
                 input_type = 'AMPA'
@@ -133,7 +110,7 @@ def run_single_rate(
 
     from lfp_mazzoni_method import calculate_lfp_mazzoni
 
-    # Compute LFP
+
     lfp_signals, time_array = calculate_lfp_mazzoni(
         spike_monitors,
         neuron_groups,
@@ -202,18 +179,7 @@ def run_rate_sweep(
     save_dir="results/input_sweeps",
     verbose=True,
 ):
-    """
-    Run a sweep over different stimulation rates.
-
-    Parameters
-    ----------
-    targets : dict
-        Dictionary mapping (layer, pop, input_type) tuples to weight scales.
-        Example: {('L4C', 'E', 'AMPA'): 1.0, ('L4C', 'PV', 'PV'): 2.0}
-
-        input_type can be 'AMPA', 'PV', 'SOM', or 'VIP'.
-        For backwards compatibility, 2-tuple keys are interpreted as AMPA.
-    """
+   
 
     if base_seed is None:
         base_seed = config['simulation']['RANDOM_SEED']
@@ -254,7 +220,7 @@ def run_rate_sweep(
 
     rate_min = int(min(rate_values))
     rate_max = int(max(rate_values))
-    # Build filename from targets (handle both 2-tuple and 3-tuple keys)
+   
     targets_str_parts = []
     target_layers = []
     target_pops = []
@@ -278,7 +244,7 @@ def run_rate_sweep(
     fname = f"sweep_{targets_str}_{rate_min}-{rate_max}Hz.npz"
     fpath = os.path.join(save_dir, fname)
 
-    # Convert to numpy arrays for saving
+
     target_layers = np.array(target_layers)
     target_pops = np.array(target_pops)
     input_types = np.array(input_types)
@@ -339,10 +305,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Generate rate values
     rate_values = np.arange(args.rate_min, args.rate_max + args.rate_step/2, args.rate_step)
 
-    # Define targets from command-line arguments (support multiple populations)
     populations = [p.strip() for p in args.pop.split(',')]
     targets = {
         (args.layer, pop, args.input_type): args.weight_scale

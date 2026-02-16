@@ -94,18 +94,18 @@ def main():
                              rate=stim_rate_L6_E, 
                              weight=w_ext_AMPA)
 
-    w_inh = 1*nS
-    som_inh_rate = 4*Hz
-    som_inh_stims = []
-    for layer_name in [ 'L5', 'L6']:
-        layer = column.layers[layer_name]
-        som_grp = layer.neuron_groups['SOM']
-        N_inh = int(CONFIG['layers'][layer_name]['poisson_inputs']['SOM']['N'])
-        som_inh = PoissonInput(som_grp, 'gVIP',
-                               N=N_inh,
-                               rate=som_inh_rate,
-                               weight=w_inh)
-        som_inh_stims.append(som_inh)
+    # w_inh = 1*nS
+    # som_inh_rate = 4*Hz
+    # som_inh_stims = []
+    # for layer_name in [ 'L5', 'L6']:
+    #     layer = column.layers[layer_name]
+    #     som_grp = layer.neuron_groups['SOM']
+    #     N_inh = int(CONFIG['layers'][layer_name]['poisson_inputs']['SOM']['N'])
+    #     som_inh = PoissonInput(som_grp, 'gVIP',
+    #                            N=N_inh,
+    #                            rate=som_inh_rate,
+    #                            weight=w_inh)
+    #     som_inh_stims.append(som_inh)
 
     column.network.add(L6_PV_stim,  L6_E_stim)
     column.network.add(L4C_PV_stim,  L4C_E_stimAMPA)

@@ -1,14 +1,12 @@
 #!/bin/bash
 
 
-# Exit on error
+
 set -e
 
-# Create log directory
 LOG_DIR="results/sweep_logs"
 mkdir -p "$LOG_DIR"
 
-# Timestamp for this batch run
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BATCH_LOG="$LOG_DIR/batch_run_${TIMESTAMP}.log"
 
@@ -17,7 +15,6 @@ echo "Starting batch run at $(date)" | tee -a "$BATCH_LOG"
 echo "======================================" | tee -a "$BATCH_LOG"
 echo "" | tee -a "$BATCH_LOG"
 
-# Function to run a single sweep
 run_sweep() {
     local layer=$1
     local pop=$2
@@ -28,10 +25,9 @@ run_sweep() {
     echo "Running: Layer=$layer, Pop=$pop, Input=$input_type, Weight=$weight" | tee -a "$BATCH_LOG"
     echo "Started at: $(date)" | tee -a "$BATCH_LOG"
     
-    # Create specific log file for this run
     local run_log="$LOG_DIR/${layer}_${pop}_${input_type}_w${weight}_${TIMESTAMP}.log"
     
-    # Run the simulation
+
     if python input_sweep.py \
         --layer "$layer" \
         --pop "$pop" \
