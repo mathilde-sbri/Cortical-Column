@@ -54,60 +54,27 @@ run_sweep() {
     echo "" | tee -a "$BATCH_LOG"
 }
 
-# ============================================================
-# 5) E + PV excitation together in each layer
-# ============================================================
-echo ">>> SWEEP GROUP: E+PV excitation together" | tee -a "$BATCH_LOG"
-
-run_sweep "L23"  "E,PV" "AMPA" 1.0
-run_sweep "L4AB" "E,PV" "AMPA" 1.0
-run_sweep "L4C"  "E,PV" "AMPA" 1.0
-run_sweep "L5"   "E,PV" "AMPA" 1.0
-run_sweep "L6"   "E,PV" "AMPA" 1.0
+run_sweep "L5"   "VIP" "AMPA" 1.0
+run_sweep "L5"   "SOM" "NMDA" 1.0
+run_sweep "L5"   "E" "SOM" 1.0
+run_sweep "L5"   "E" "PV" 1.0
+run_sweep "L5"   "VIP" "NMDA" 1.0
+run_sweep "L5"   "PV" "SOM" 1.0
 
 
-# ============================================================
-# 2) SOM inhibition (VIP-type inhibition onto SOM) in each layer
-# ============================================================
-echo ">>> SWEEP GROUP: SOM inhibition via gVIP" | tee -a "$BATCH_LOG"
+run_sweep "L6"   "VIP" "AMPA" 1.0
+run_sweep "L6"   "SOM" "NMDA" 1.0
+run_sweep "L6"   "E" "SOM" 1.0
+run_sweep "L6"   "E" "PV" 1.0
+run_sweep "L6"   "VIP" "NMDA" 1.0
+run_sweep "L6"   "PV" "SOM" 1.0
 
-run_sweep "L23"  "SOM" "VIP" 1.0
-run_sweep "L4AB" "SOM" "VIP" 1.0
-run_sweep "L4C"  "SOM" "VIP" 1.0
-run_sweep "L5"   "SOM" "VIP" 1.0
-run_sweep "L6"   "SOM" "VIP" 1.0
-
-# ============================================================
-# 3) E excitation alone in each layer
-# ============================================================
-echo ">>> SWEEP GROUP: E excitation alone" | tee -a "$BATCH_LOG"
-
-run_sweep "L23"  "E" "AMPA" 1.0
-run_sweep "L4AB" "E" "AMPA" 1.0
-run_sweep "L4C"  "E" "AMPA" 1.0
-run_sweep "L5"   "E" "AMPA" 1.0
-run_sweep "L6"   "E" "AMPA" 1.0
-
-# ============================================================
-# 4) PV excitation alone in each layer
-# ============================================================
-echo ">>> SWEEP GROUP: PV excitation alone" | tee -a "$BATCH_LOG"
-
-run_sweep "L23"  "PV" "AMPA" 1.0
-run_sweep "L4AB" "PV" "AMPA" 1.0
-run_sweep "L4C"  "PV" "AMPA" 1.0
-run_sweep "L5"   "PV" "AMPA" 1.0
-run_sweep "L6"   "PV" "AMPA" 1.0
-# ============================================================
-# 1) SOM excitation (AMPA input to SOM) in each layer
-# ============================================================
-echo ">>> SWEEP GROUP: SOM excitation (AMPA)" | tee -a "$BATCH_LOG"
-
-run_sweep "L23"  "SOM" "AMPA" 1.0
-run_sweep "L4AB" "SOM" "AMPA" 1.0
-run_sweep "L4C"  "SOM" "AMPA" 1.0
-run_sweep "L5"   "SOM" "AMPA" 1.0
-run_sweep "L6"   "SOM" "AMPA" 1.0
+run_sweep "L4C"   "VIP" "AMPA" 1.0
+run_sweep "L4C"   "SOM" "NMDA" 1.0
+run_sweep "L4C"   "E" "SOM" 1.0
+run_sweep "L4C"   "E" "PV" 1.0
+run_sweep "L4C"   "VIP" "NMDA" 1.0
+run_sweep "L4C"   "PV" "SOM" 1.0
 
 
 
