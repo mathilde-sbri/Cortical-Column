@@ -42,7 +42,7 @@ run_sweep() {
         --rate-step 1 \
         --baseline-ms 1000 \
         --stim-ms 1500 \
-        --save-dir "results/input_sweeps2" \
+        --save-dir "results/input_sweeps/17_02" \
         2>&1 | tee "$run_log"; then
         
         echo "✓ Completed successfully at: $(date)" | tee -a "$BATCH_LOG"
@@ -56,6 +56,8 @@ run_sweep() {
 
 # L5 configurations
 run_sweep "L5" "E" "AMPA" 1.0
+
+
 run_sweep "L5" "PV" "AMPA" 1.0
 run_sweep "L5" "SOM" "AMPA" 1.0
 
@@ -78,6 +80,7 @@ run_sweep "L23" "E" "SOM" 1.0
 # L23 inhibitory populations
 run_sweep "L23" "PV" "AMPA" 1.0
 run_sweep "L23" "SOM" "AMPA" 1.0
+
 run_sweep "L23" "VIP" "AMPA" 1.0
 
 
@@ -85,6 +88,10 @@ run_sweep "L23" "VIP" "AMPA" 1.0
 # L6 configurations
 run_sweep "L6" "E" "AMPA" 1.0
 run_sweep "L6" "PV" "AMPA" 1.0
+run_sweep "L5" "SOM" "AMPA" 1.0
+
+run_sweep "L5" "E" "NMDA" 1.0
+run_sweep "L23" "SOM" "NMDA" 1.0
 
 # L1 VIP cells (example)
 
