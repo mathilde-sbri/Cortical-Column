@@ -310,16 +310,36 @@ def run_rate_sweep(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run input sweep simulations')
-    parser.add_argument('--layer', type=str, required=True,
-                        help='Target layer (e.g., L4C, L23, L5, L6, L1)')
-    parser.add_argument('--pop', type=str, required=True,
-                        help='Target population (e.g., E, PV, SOM, VIP)')
+    parser = argparse.ArgumentParser(
+        description='Run input sweep simulations',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Single target (old style still works):
+  python input_sweep.py --layer L4C --pop E --input-type AMPA --weight-scale 1.0
+
+  # Multiple targets using --target (new style):
+  python input_sweep.py --target L4C:E:AMPA:1.0 --target L4C:PV:AMPA:1.5
+
+  # --target format: LAYER:POP:INPUT_TYPE:WEIGHT_SCALE
+  #   INPUT_TYPE choices: AMPA, PV, SOM, VIP
+        """
+    )
+    # New multi-target argument (can be repeated)
+    parser.add_argument('--target', type=str, action='append', dest='targets_list',
+                        metavar='LAYER:POP:INPUT_TYPE:WEIGHT',
+                        help='Target spec as LAYER:POP:INPUT_TYPE:WEIGHT (repeatable). '
+                             'Example: --target L4C:E:AMPA:1.0 --target L4C:PV:AMPA:1.5')
+    # Legacy single-target arguments (kept for backwards compatibility)
+    parser.add_argument('--layer', type=str, default=None,
+                        help='[Legacy] Target layer (e.g., L4C). Use --target instead.')
+    parser.add_argument('--pop', type=str, default=None,
+                        help='[Legacy] Target population (e.g., E, PV). Use --target instead.')
     parser.add_argument('--input-type', type=str, default='AMPA',
                         choices=['AMPA', 'PV', 'SOM', 'VIP'],
-                        help='Input type (default: AMPA)')
+                        help='[Legacy] Input type (default: AMPA). Use --target instead.')
     parser.add_argument('--weight-scale', type=float, default=1.0,
-                        help='Weight scale multiplier (default: 1.0)')
+                        help='[Legacy] Weight scale multiplier (default: 1.0). Use --target instead.')
     parser.add_argument('--rate-min', type=float, default=0,
                         help='Minimum stimulation rate in Hz (default: 0)')
     parser.add_argument('--rate-max', type=float, default=20,
@@ -334,24 +354,36 @@ if __name__ == "__main__":
                         help='Directory to save results (default: results/input_sweeps2)')
     parser.add_argument('--quiet', action='store_true',
                         help='Suppress verbose output')
-    
+
     args = parser.parse_args()
-    
+
+    # Build targets dict: prefer --target list, fall back to legacy --layer/--pop
+    targets = {}
+    if args.targets_list:
+        for spec in args.targets_list:
+            parts = spec.split(':')
+            if len(parts) != 4:
+                parser.error(f"--target must be LAYER:POP:INPUT_TYPE:WEIGHT, got: {spec!r}")
+            layer, pop, input_type, weight_str = parts
+            if input_type not in ('AMPA', 'PV', 'SOM', 'VIP'):
+                parser.error(f"INPUT_TYPE must be one of AMPA/PV/SOM/VIP, got: {input_type!r}")
+            targets[(layer, pop, input_type)] = float(weight_str)
+    elif args.layer and args.pop:
+        targets[(args.layer, args.pop, args.input_type)] = args.weight_scale
+    else:
+        parser.error("Provide either --target LAYER:POP:INPUT_TYPE:WEIGHT (repeatable) "
+                     "or legacy --layer + --pop arguments.")
+
     # Generate rate values
     rate_values = np.arange(args.rate_min, args.rate_max + args.rate_step/2, args.rate_step)
-    
-    # Define targets from command-line arguments
-    targets = {
-        (args.layer, args.pop, args.input_type): args.weight_scale
-    }
-    
+
+    targets_display = ", ".join(f"{p}@{l}[{it}]x{w}" for (l, p, it), w in targets.items())
     print(f"\n{'='*70}")
-    print(f"Starting sweep: {args.pop} in {args.layer} with {args.input_type} input")
-    print(f"Weight scale: {args.weight_scale}")
+    print(f"Starting sweep: {targets_display}")
     print(f"Rate range: {args.rate_min}-{args.rate_max} Hz (step: {args.rate_step})")
     print(f"Save directory: {args.save_dir}")
     print(f"{'='*70}\n")
-    
+
     result_path = run_rate_sweep(
         config=CONFIG,
         targets=targets,
