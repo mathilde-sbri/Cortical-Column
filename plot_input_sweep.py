@@ -4,6 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import argparse
 
+LAYER_DEPTH_RANGES = {
+    'L23':  (0.45, 1.30),
+    'L4AB': (0.14, 0.45),
+    'L4C':  (-0.14, 0.14),
+    'L5':   (-0.49, -0.14),
+    'L6':   (-0.94, -0.49),
+}
+
 FREQUENCY_BANDS = {
     'delta': (0.5, 4),
     'theta': (4, 8),
@@ -76,6 +84,22 @@ def load_sweep_results(filepath):
     }
 
 
+def get_excluded_electrode_indices(electrode_positions, exclude_layers):
+    """Return set of electrode indices whose z-depth falls within any excluded layer."""
+    excluded = set()
+    for i, pos in enumerate(electrode_positions):
+        z = pos[2]
+        for layer in exclude_layers:
+            layer = layer.upper()
+            if layer not in LAYER_DEPTH_RANGES:
+                raise ValueError(f"Unknown layer '{layer}'. Valid layers: {list(LAYER_DEPTH_RANGES.keys())}")
+            zmin, zmax = LAYER_DEPTH_RANGES[layer]
+            if zmin <= z <= zmax:
+                excluded.add(i)
+                break
+    return excluded
+
+
 def get_electrode_labels(electrode_positions):
     depths = [pos[2] for pos in electrode_positions]
     labels = []
@@ -93,6 +117,7 @@ def plot_sweep_heatmaps(
     save_path=None,
     figsize=(16, 14),
     show_bands=True,
+    exclude_layers=None,
 ):
     """
     Plot power spectrum heatmaps for each electrode.
@@ -116,16 +141,20 @@ def plot_sweep_heatmaps(
     frequencies = frequencies[freq_mask]
     psd_stack = psd_stack[:, :, freq_mask]
 
-    n_electrodes = psd_stack.shape[1]
     electrode_labels, depths = get_electrode_labels(electrode_positions)
 
-    depth_order = np.argsort(depths)
+    excluded = get_excluded_electrode_indices(electrode_positions, exclude_layers or [])
+    depth_order = [i for i in np.argsort(depths) if i not in excluded]
+    n_electrodes = len(depth_order)
 
-    fig, axes = plt.subplots(4, 4, figsize=figsize)
-    axes = axes.flatten()
+    n_cols = 4
+    n_rows = max(1, (n_electrodes + n_cols - 1) // n_cols)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(figsize[0], figsize[1] * n_rows / 4))
+    axes = np.array(axes).flatten()
 
-    vmin = psd_stack.min()
-    vmax = psd_stack.max()
+    psd_included = psd_stack[:, list(depth_order), :]
+    vmin = psd_included.min()
+    vmax = psd_included.max()
 
     if log_scale:
         vmin = max(vmin, 1e-10)
@@ -155,18 +184,19 @@ def plot_sweep_heatmaps(
         z = depths[elec_idx]
         ax.set_title(f"Electrode {elec_idx+1} (z={z:.2f}mm)", fontsize=10)
 
-        if plot_idx >= 12: 
+        last_row_start = (n_electrodes - 1) // n_cols * n_cols
+        if plot_idx >= last_row_start:
             ax.set_xlabel("Input rate (Hz)", fontsize=9)
-        if plot_idx % 4 == 0:  
+        if plot_idx % n_cols == 0:
             ax.set_ylabel("Frequency (Hz)", fontsize=9)
 
         ax.tick_params(labelsize=8)
 
         if show_bands:
-            show_labels = (plot_idx % 4 == 3) or (plot_idx == n_electrodes - 1)
+            show_labels = (plot_idx % n_cols == n_cols - 1) or (plot_idx == n_electrodes - 1)
             add_frequency_band_lines(ax, fmax, show_labels=show_labels)
 
-    for idx in range(n_electrodes, 16):
+    for idx in range(n_electrodes, len(axes)):
         axes[idx].axis('off')
 
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
@@ -274,6 +304,7 @@ def plot_sweep_difference(
     save_path=None,
     figsize=(16, 14),
     show_bands=True,
+    exclude_layers=None,
 ):
 
     data = load_sweep_results(filepath)
@@ -289,23 +320,27 @@ def plot_sweep_difference(
     frequencies = frequencies[freq_mask]
     psd_stack = psd_stack[:, :, freq_mask]
 
-    baseline_psd = psd_stack[baseline_idx, :, :]  
-    psd_diff = psd_stack - baseline_psd[np.newaxis, :, :]  
-    n_electrodes = psd_stack.shape[1]
+    baseline_psd = psd_stack[baseline_idx, :, :]
+    psd_diff = psd_stack - baseline_psd[np.newaxis, :, :]
     electrode_labels, depths = get_electrode_labels(electrode_positions)
 
-    depth_order = np.argsort(depths)
+    excluded = get_excluded_electrode_indices(electrode_positions, exclude_layers or [])
+    depth_order = [i for i in np.argsort(depths) if i not in excluded]
+    n_electrodes = len(depth_order)
 
-    fig, axes = plt.subplots(4, 4, figsize=figsize)
-    axes = axes.flatten()
+    n_cols = 4
+    n_rows = max(1, (n_electrodes + n_cols - 1) // n_cols)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(figsize[0], figsize[1] * n_rows / 4))
+    axes = np.array(axes).flatten()
 
-    max_abs = np.abs(psd_diff).max()
+    psd_diff_included = psd_diff[:, list(depth_order), :]
+    max_abs = np.abs(psd_diff_included).max()
     vmin, vmax = -max_abs, max_abs
 
     for plot_idx, elec_idx in enumerate(depth_order):
         ax = axes[plot_idx]
 
-        psd_diff_elec = psd_diff[:, elec_idx, :].T 
+        psd_diff_elec = psd_diff[:, elec_idx, :].T
 
         im = ax.imshow(
             psd_diff_elec,
@@ -320,18 +355,19 @@ def plot_sweep_difference(
         z = depths[elec_idx]
         ax.set_title(f"Electrode {elec_idx+1} (z={z:.2f}mm)", fontsize=10)
 
-        if plot_idx >= 12: 
+        last_row_start = (n_electrodes - 1) // n_cols * n_cols
+        if plot_idx >= last_row_start:
             ax.set_xlabel("Input rate (Hz)", fontsize=9)
-        if plot_idx % 4 == 0:  
+        if plot_idx % n_cols == 0:
             ax.set_ylabel("Frequency (Hz)", fontsize=9)
 
         ax.tick_params(labelsize=8)
 
         if show_bands:
-            show_labels = (plot_idx % 4 == 3) or (plot_idx == n_electrodes - 1)
+            show_labels = (plot_idx % n_cols == n_cols - 1) or (plot_idx == n_electrodes - 1)
             add_frequency_band_lines(ax, fmax, show_labels=show_labels)
 
-    for idx in range(n_electrodes, 16):
+    for idx in range(n_electrodes, len(axes)):
         axes[idx].axis('off')
 
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
@@ -372,6 +408,11 @@ if __name__ == "__main__":
     parser.add_argument("--diff", action="store_true", help="Also plot difference from baseline")
     parser.add_argument("--baseline-idx", type=int, default=0, help="Index of baseline rate for difference plot")
     parser.add_argument("--no-bands", action="store_true", help="Hide frequency band annotations")
+    parser.add_argument(
+        "--exclude", type=str, nargs="+", default=[], metavar="LAYER",
+        help="Exclude electrodes from these layers (e.g. --exclude L23 L4AB). "
+             f"Valid layers: {list(LAYER_DEPTH_RANGES.keys())}"
+    )
 
     args = parser.parse_args()
 
@@ -383,6 +424,7 @@ if __name__ == "__main__":
         cmap=args.cmap,
         save_path=args.save,
         show_bands=not args.no_bands,
+        exclude_layers=args.exclude,
     )
 
     if args.summary:
@@ -410,4 +452,5 @@ if __name__ == "__main__":
             baseline_idx=args.baseline_idx,
             save_path=diff_save,
             show_bands=not args.no_bands,
+            exclude_layers=args.exclude,
         )
