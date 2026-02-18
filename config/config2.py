@@ -67,7 +67,7 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L4AB']['connection_prob'],
         'conductance': csv_layer_configs['L4AB']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 72},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 35},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 24},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 14},
@@ -89,7 +89,7 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L4C']['connection_prob'],
         'conductance': csv_layer_configs['L4C']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 72},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 35},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 10},
@@ -111,7 +111,7 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L5']['connection_prob'],
         'conductance': csv_layer_configs['L5']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 75},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 20},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 10},
@@ -133,7 +133,7 @@ _LAYER_CONFIGS = {
         'connection_prob': csv_layer_configs['L6']['connection_prob'],
         'conductance': csv_layer_configs['L6']['conductance'],
         'poisson_inputs': {
-            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 60},
+            'E':        {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 75},
             'PV':       {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 40},
             'SOM':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 28},
             'VIP':      {'target': 'gE_AMPA', 'weight': 'EXT_AMPA', 'N': 10},
