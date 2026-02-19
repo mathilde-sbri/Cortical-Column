@@ -110,17 +110,11 @@ def run_single_trial(
                              rate=stim_rate_L6_E, 
                              weight=w_ext_AMPA)
 
-    # L6_VIP_grp = L6.neuron_groups['VIP']
-    # N_stim_VIP = int(cfg_L6['poisson_inputs']['VIP']['N'])
-    # stim_rate_VIP = 6*Hz  
-    # L6_VIP_stim= PoissonInput(L6_VIP_grp, 'gE_AMPA', 
-    #                               N=N_stim_VIP, 
-    #                               rate=stim_rate_VIP, 
-    #                               weight=w_ext_AMPA)  
-    # column.network.add(L6_VIP_stim)
+
 
     column.network.add(L6_E_stim, L6_PV_stim)
     column.network.add(L4C_E_stimAMPA, L4C_PV_stim)
+
 
 
     column.network.run(post_ms * ms)
@@ -284,6 +278,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/19_02",
+        save_dir="results/19_02_3",
         verbose=True,
     )
