@@ -51,18 +51,18 @@ def main():
     column.network.run(baseline_time * ms)
    
     # column.network.remove(L23_SOM_stimNMDA)
-    L23 = column.layers['L23']
-    cfg_L23 = CONFIG['layers']['L23']
+    # L23 = column.layers['L23']
+    # cfg_L23 = CONFIG['layers']['L23']
    
     
-    L23_VIP_grp = L23.neuron_groups['VIP']
-    N_stim_VIP = int(cfg_L23['poisson_inputs']['VIP']['N'])
-    stim_rate_VIP = 6*Hz  
-    L23_VIP_stim= PoissonInput(L23_VIP_grp, 'gE_AMPA', 
-                                  N=N_stim_VIP, 
-                                  rate=stim_rate_VIP, 
-                                  weight=w_ext_AMPA)  
-    column.network.add(L23_VIP_stim)
+    # L23_VIP_grp = L23.neuron_groups['VIP']
+    # N_stim_VIP = int(cfg_L23['poisson_inputs']['VIP']['N'])
+    # stim_rate_VIP = 6*Hz  
+    # L23_VIP_stim= PoissonInput(L23_VIP_grp, 'gE_AMPA', 
+    #                               N=N_stim_VIP, 
+    #                               rate=stim_rate_VIP, 
+    #                               weight=w_ext_AMPA)  
+    # column.network.add(L23_VIP_stim)
 
    
     
@@ -73,8 +73,8 @@ def main():
    
     
     L4C_E_grp = L4C.neuron_groups['E']
-    N_stim_E = int(cfg_L4C['poisson_inputs']['E']['N'])
-    stim_rate_E = 20*Hz  
+    N_stim_E = 40
+    stim_rate_E = 40*Hz  
     L4C_E_stimAMPA = PoissonInput(L4C_E_grp, 'gE_AMPA', 
                                   N=N_stim_E, 
                                   rate=stim_rate_E, 
@@ -82,12 +82,12 @@ def main():
     
     
     L4C_PV_grp = L4C.neuron_groups['PV']
-    N_stim_PV = int(cfg_L4C['poisson_inputs']['PV']['N'])
-    stim_rate_PV = 20*Hz 
+    N_stim_PV = 30
+    stim_rate_PV = 40*Hz 
     L4C_PV_stim = PoissonInput(L4C_PV_grp, 'gE_AMPA', 
                                N=N_stim_PV, 
                                rate=stim_rate_PV, 
-                               weight=w_ext_AMPA*3)  
+                               weight=w_ext_AMPA*2)  
     
     
     L6 = column.layers['L6']

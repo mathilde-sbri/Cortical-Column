@@ -46,11 +46,17 @@ class CorticalLayer:
         for pop_name, n in self.layer_config.get('neuron_counts', {}).items():
             eq_key = eq_override.get(pop_name, pop_name)
             
+            t_ref_config = self.config['neurons']['T_REF']
+            if isinstance(t_ref_config, dict):
+                t_ref = t_ref_config.get(pop_name, t_ref_config.get('E'))
+            else:
+                t_ref = t_ref_config
+
             self.neuron_groups[pop_name] = NeuronGroup(
-                int(n), eqs_map[eq_key], 
-                threshold=threshold, 
+                int(n), eqs_map[eq_key],
+                threshold=threshold,
                 reset=reset,
-                refractory=self.config['neurons']['T_REF'],
+                refractory=t_ref,
                 namespace=common_namespace
             )
             
