@@ -19,8 +19,9 @@ def run_single_trial(
     if base_seed is None:
         base_seed = config['simulation']['RANDOM_SEED']
 
-    trial_seed = int(base_seed + trial_id)
-    np.random.seed(trial_seed)
+    # trial_seed = int(base_seed + trial_id)
+    # np.random.seed(trial_seed)
+    trial_seed = base_seed
     b2.seed(trial_seed)
 
     b2.start_scope()
@@ -278,6 +279,6 @@ if __name__ == "__main__":
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/19_02_3",
+        save_dir="results/24_02_same_seed",
         verbose=True,
     )
