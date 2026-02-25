@@ -411,6 +411,7 @@ CONFIG = {
     
     'inter_layer_connections': _INTER_LAYER_CONNECTIONS,
     'inter_layer_conductances': _INTER_LAYER_CONDUCTANCES,
+    'inter_layer_scaling': 1.0,
     'electrode_positions' : [
         (0, 0, -0.94),
         (0, 0, -0.79),

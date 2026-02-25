@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Create plots directory
-PLOTS_DIR="plots_17_02"
+PLOTS_DIR="plots_20_02"
 mkdir -p "$PLOTS_DIR"
 
 # Input directory containing sweep results
-INPUT_DIR="results/input_sweeps/17_02"
+INPUT_DIR="results/input_sweeps/19_02_all_layers_AMPA"
 
 # Layers to exclude from plots (space-separated, e.g. "L23 L4AB")
 # Valid layers: L23 L4AB L4C L5 L6
-EXCLUDE_LAYERS="L23 L4AB"
+EXCLUDE_LAYERS=""
 
 echo "Plotting overnight sweep results..."
 echo "Output directory: $PLOTS_DIR"
