@@ -237,7 +237,7 @@ def run_multiple_trials(
 
     os.makedirs(save_dir, exist_ok=True)
 
-    for trial_id in range(n_trials):
+    for trial_id in range(15, 15 + n_trials):
         data = run_single_trial(
             config=config,
             trial_id=trial_id,
@@ -275,10 +275,10 @@ def run_multiple_trials(
 if __name__ == "__main__":
     run_multiple_trials(
         CONFIG,
-        n_trials=15,
+        n_trials=50,
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/25_02_3",
+        save_dir="results/26_02",
         verbose=True,
     )
