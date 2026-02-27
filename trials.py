@@ -193,6 +193,15 @@ def run_single_trial(
                 "t_ms": t_ms,
                 "rate_hz": r_hz,
             }
+    spike_data = {}
+    for layer_name, layer_spk_mons in spike_monitors.items():
+        spike_data[layer_name] = {}
+        for mon_name, mon in layer_spk_mons.items():
+            spike_data[layer_name][mon_name] = {
+                'times_ms': np.array(mon.t / ms),
+                'indices':  np.array(mon.i),
+            }
+
 
     data = {
         "trial_id": trial_id,
@@ -205,6 +214,7 @@ def run_single_trial(
         "channel_labels": np.array(channel_labels, dtype=object),
         "channel_depths": np.array(channel_depths),
         "rate_data": rate_data,
+        "spike_data" : spike_data,
         "baseline_ms": baseline_ms,
         "post_ms": post_ms,
         "stim_onset_ms": baseline_ms,  
@@ -261,6 +271,7 @@ def run_multiple_trials(
             "channel_labels": data["channel_labels"],
             "channel_depths": data["channel_depths"],
             "rate_data": data["rate_data"],
+            "spike_data": data["spike_data"],
             "baseline_ms": data["baseline_ms"],
             "post_ms": data["post_ms"],
             "stim_onset_ms": data["stim_onset_ms"],
@@ -275,10 +286,10 @@ def run_multiple_trials(
 if __name__ == "__main__":
     run_multiple_trials(
         CONFIG,
-        n_trials=15,
+        n_trials=50,
         baseline_ms=2000,
         post_ms=1500,
         fs=10000,
-        save_dir="results/25_02_3",
+        save_dir="results/26_02_spike_data",
         verbose=True,
     )
